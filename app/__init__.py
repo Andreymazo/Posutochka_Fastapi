@@ -1,0 +1,1 @@
+# Posutochka FastAPI Application
