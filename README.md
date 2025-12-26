@@ -1,147 +1,35 @@
-### Пример структуры базы данных
 
-```sql
-CREATE TABLE User (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    phone_number VARCHAR(15) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL CHECK(role IN ('landlord', 'client', 'moderator')),
-    registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+Python 3.12
+docker run --name containerpostgres -e POSTGRES_PASSWORD=123456 -d -p 5433:5432 postgres
+docker exec -it containerpostgres psql -U postgres
+docker exec -it containerpostgres psql -U postgres -c "CREATE DATABASE posutochka;\c posutochka;"
 
-CREATE TABLE Landlord (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES User(id),
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL
-);
-
-CREATE TABLE Client (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES User(id),
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL
-);
-
-CREATE TABLE Moderator (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES User(id),
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL
-);
-
-CREATE TABLE Apartment (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    price_per_night DECIMAL(10, 2) NOT NULL,
-    location VARCHAR(255) NOT NULL,
-    photos_ids INTEGER[] -- массив IDs фотографий
-);
-
-CREATE TABLE Photo (
-    id SERIAL PRIMARY KEY,
-    apartment_id INTEGER REFERENCES Apartment(id),
-    url VARCHAR(255) NOT NULL
-);
-
-CREATE TABLE Booking (
-    id SERIAL PRIMARY KEY,
-    landlord_id INTEGER REFERENCES Landlord(user_id),
-    client_id INTEGER REFERENCES Client(user_id),
-    apartment_id INTEGER REFERENCES Apartment(id),
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    cost DECIMAL(10, 2) NOT NULL,
-    booking_status VARCHAR(50) NOT NULL CHECK(booking_status IN ('pending', 'confirmed', 'cancelled'))
-);
-
-CREATE TABLE Payment (
-    id SERIAL PRIMARY KEY,
-    booking_id INTEGER REFERENCES Booking(id),
-    amount DECIMAL(10, 2) NOT NULL,
-    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    payment_status VARCHAR(50) NOT NULL CHECK(payment_status IN ('paid', 'pending', 'failed'))
-);
-____________________________________
-### Обновленные сущности
-
-#### Пользователь (User)
-- **Описание**: Основная сущность для всех типов пользователей.
-- **Поля**:
-  - `id` (уникальный, первичный ключ)
-  - `email`
-  - `phone_number`
-  - `password_hash`
-  - `role` (enum: "арендодатель", "клиент", "модератор")
-  - `registration_date`
-  - `telegram_username` (опциональное поле для Telegram-идентификатора)
-
-#### Арендодатель (Landlord)
-- **Описание**: Подкласс пользователя, который предоставляет апартаменты в аренду.
-- **Поля**:
-  - `id` (уникальный, первичный ключ)
-  - `user_id` (ссылается на ID пользователя в таблице User)
-  - `first_name`
-  - `last_name`
-
-#### Клиент (Client)
-- **Описание**: Подкласс пользователя, который арендует апартаменты.
-- **Поля**:
-  - `id` (уникальный, первичный ключ)
-  - `user_id` (ссылается на ID пользователя в таблице User)
-  - `first_name`
-  - `last_name`
-
-#### Модератор (Moderator)
-- **Описание**: Подкласс пользователя, ответственный за управление контентом и бронированиями.
-- **Поля**:
-  - `id` (уникальный, первичный ключ)
-  - `user_id` (ссылается на ID пользователя в таблице User)
-  - `first_name`
-  - `last_name`
-
-#### Апартамент (Apartment)
-- **Описание**: Сущность для описания арендуемых объектов.
-- **Поля**:
-  - `id` (уникальный, первичный ключ)
-  - `name`
-  - `description`
-  - `price_per_night`
-  - `location`
-  - `photos_ids` (массив для хранения IDs фотографий)
-
-#### Фото (Photo)
-- **Описание**: Сущность для хранения фотографий апартаментов.
-- **Поля**:
-  - `id` (уникальный, первичный ключ)
-  - `apartment_id` (ссылается на ID апартамента в таблице Apartment)
-  - `url`
-
-#### Бронирование (Booking)
-- **Описание**: Сущность для хранения информации о бронированиях.
-- **Поля**:
-  - `id` (уникальный, первичный ключ)
-  - `landlord_id` (ссылается на ID арендодателя в таблице Landlord)
-  - `client_id` (ссылается на ID клиента в таблице Client)
-  - `apartment_id` (ссылается на ID апартамента в таблице Apartment)
-  - `start_date`
-  - `end_date`
-  - `cost`
-  - `booking_status`
-
-#### Оплата (Payment)
-- **Описание**: Сущность для хранения информации об оплатах.
-- **Поля**:
-  - `id` (уникальный, первичный ключ)
-  - `booking_id` (ссылается на ID бронирования в таблице Booking)
-  - `amount`
-  - `payment_date`
-  - `payment_status`
-
-
-### Интеграция с FastAPI
+docker system prune
+docker rm container
+https://habr.com/ru/articles/970798/?ysclid=mjlp9t4jtd778062407
+прокт FastAPI. хочу использовать pydantic и расписать свою схему на три папки routers (логика), models (поля) и schemas (типы для pydantic). структура примерно такая : 
+📂 posutochka/
+├── 📂 app/                  # Основной код приложения (Python-пакет)
+│   ├── 📜 __init__.py       # Делает папку пакетом. Обычно пустой.
+│   ├── 📜 main.py           # Точка входа. Здесь создается app = FastAPI()
+│   ├── 📜 database.py       # Настройки подключения к БД (engine, SessionLocal)
+│   │
+│   ├── 📂 routers/          # Наши "контроллеры" (обработчики путей)
+│   │   ├── 📜 __init__.py
+│   │   ├── 📜 users.py      # Роутер для пользователей
+│   │   └── 📜 ...Другие роутеры
+│   │
+│   ├── 📂 models/           # SQLAlchemy модели (структура БД)
+│   │   ├── 📜 __init__.py
+│   │   └── 📜 user.py
+│   │
+│   └── 📂 schemas/          # Pydantic схемы (валидация данных/DTO)
+│       ├── 📜 __init__.py
+│       └── 📜 user.py
+│
+├── 📜 .env                  # Секретные переменные (пароли, токены)
+├── 📜 .gitignore            # Список того, что НЕЛЬЗЯ грузить в Git
+└── 📜 requirements.txt      # Список зависимостей
 
 aiogram
 `aiogram` — это мощная библиотека для создания Telegram-ботов на Python, которая использует асинхронное программирование с помощью `asyncio`. Она позволяет разработчикам создавать 
@@ -484,3 +372,95 @@ class Client(Base):
 ```
 
 Эти ограничения гарантируют, что в базе данных не будет нарушено правило "один ко одному".
+
+________________________________
+
+### 2. SQLAlchemy модели (app/models/user.py)
+
+```python
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Enum, Table, ARRAY
+from sqlalchemy.orm import relationship
+from geoalchemy2.types import Geography
+from datetime import datetime
+
+from app.database import Base
+
+class User(Base):
+    __tablename__ = 'user'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, nullable=False)
+    phone_number = Column(String(15), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    role = Column(Enum('landlord', 'client'), nullable=False)
+    registration_date = Column(DateTime, default=datetime.utcnow)
+    telegram_username = Column(String(32))
+    
+    landlord = relationship("Landlord", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    client = relationship("Client", back_populates="user", uselist=False, cascade="all, delete-orphan")
+
+# Добавляем __repr__ для удобства
+def __repr__(self):
+    return f"User(id={self.id}, email='{self.email}', role='{self.role}')"
+```
+
+### 3. Pydantic схемы (app/schemas/user.py)
+
+```python
+from pydantic import BaseModel, EmailStr
+
+class UserBase(BaseModel):
+    email: EmailStr
+    phone_number: str
+    password_hash: str
+    role: str = "client"
+    
+    class Config:
+        orm_mode = True
+
+class UserCreate(UserBase):
+    telegram_username: str | None = None
+
+class UserResponse(UserBase):
+    id: int
+    registration_date: datetime
+    telegram_username: str | None = None
+    
+    class Config:
+        orm_mode = True
+```
+
+### 4. Использование Pydantic в контроллерах (app/routers/users.py)
+
+```python
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+import app.database as db
+from app.models.user import User
+from app.schemas.user import UserCreate, UserResponse
+
+router = APIRouter()
+
+# Предположим, что у нас есть функция get_db для получения сессии базы данных
+def get_db():
+    db_session = db.SessionLocal()
+    try:
+        yield db_session
+    finally:
+        db_session.close()
+
+@router.post("/users/", response_model=UserResponse)
+def create_user(user: UserCreate, db: Session = Depends(get_db)):
+    # Проверка на уникальность email
+    existing_user = db.query(User).filter(User.email == user.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Создание нового пользователя
+    new_user = User(email=user.email, phone_number=user.phone_number, password_hash=user.password_hash, role=user.role)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
+    return new_user
+```
