@@ -4,7 +4,9 @@ from fastapi import FastAPI
 from app.database import engine
 from app.models import Base
 from app.routers import users, landlords, clients, apartments, photos, bookings, payments
-
+from dotenv import load_dotenv
+# Load environment variables from .env file
+load_dotenv() 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

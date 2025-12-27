@@ -3,10 +3,15 @@ Python 3.12
 docker run --name containerpostgres -e POSTGRES_PASSWORD=123456 -d -p 5433:5432 postgres
 docker exec -it containerpostgres psql -U postgres
 docker exec -it containerpostgres psql -U postgres -c "CREATE DATABASE posutochka;\c posutochka;"
-
+uvicorn app.main:app --reload
 docker system prune
 docker rm container
+pip install python-dotenv
+# Load environment variables from .env file
+load_dotenv() 
 https://habr.com/ru/articles/970798/?ysclid=mjlp9t4jtd778062407
+commit for bot - "Я бы так же предложил убрать https://github.com/link-foundation/python-ai-driven-development-pipeline-template в качестве сабмодуля и просто применить его в качестве шаблона для этого репозитория, взяв из него лучшие практики CI/CD. Рекомендую обратить внимание на полное дерево файлов из этого репозитория."
+
 прокт FastAPI. хочу использовать pydantic и расписать свою схему на три папки routers (логика), models (поля) и schemas (типы для pydantic). структура примерно такая : 
 📂 posutochka/
 ├── 📂 app/                  # Основной код приложения (Python-пакет)
