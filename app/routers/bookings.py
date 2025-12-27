@@ -10,9 +10,9 @@ router = APIRouter(prefix="/bookings", tags=["bookings"])
 
 @router.get("/", response_model=list[BookingRead])
 def get_bookings(
-    landlord_id: int = None,
-    client_id: int = None,
-    apartment_id: int = None,
+    landlord_id: int | None = None,
+    client_id: int | None = None,
+    apartment_id: int | None = None,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
@@ -66,7 +66,7 @@ def update_booking(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
 
     update_data = booking_data.model_dump(exclude_unset=True)
-    if "booking_status" in update_data and update_data["booking_status"]:
+    if update_data.get("booking_status"):
         update_data["booking_status"] = update_data["booking_status"].value
 
     for field, value in update_data.items():

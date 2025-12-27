@@ -13,8 +13,6 @@ class ApartmentBase(BaseModel):
 class ApartmentCreate(ApartmentBase):
     """Schema for creating a new Apartment."""
 
-    pass
-
 
 class ApartmentUpdate(BaseModel):
     """Schema for updating an Apartment - all fields optional."""

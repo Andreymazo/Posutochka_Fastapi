@@ -10,7 +10,7 @@ router = APIRouter(prefix="/payments", tags=["payments"])
 
 @router.get("/", response_model=list[PaymentRead])
 def get_payments(
-    booking_id: int = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
+    booking_id: int | None = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ) -> list[Payment]:
     """Get all payments with optional booking filter and pagination."""
     query = db.query(Payment)
@@ -53,7 +53,7 @@ def update_payment(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
 
     update_data = payment_data.model_dump(exclude_unset=True)
-    if "payment_status" in update_data and update_data["payment_status"]:
+    if update_data.get("payment_status"):
         update_data["payment_status"] = update_data["payment_status"].value
 
     for field, value in update_data.items():

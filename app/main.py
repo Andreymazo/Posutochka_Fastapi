@@ -8,7 +8,7 @@ from app.routers import apartments, bookings, clients, landlords, payments, phot
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     """Application lifespan: create database tables on startup."""
     Base.metadata.create_all(bind=engine)
     yield
