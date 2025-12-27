@@ -1,13 +1,15 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
-from typing import Generator
 import os
+from collections.abc import Generator
+
+from dotenv import load_dotenv
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+
+# Load environment variables BEFORE reading them
+load_dotenv()
 
 # Database URL from environment variable or default
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:123456@localhost:5433/postgres"
-)
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:123456@localhost:5432/posutochka")
 
 # Create SQLAlchemy engine
 engine = create_engine(DATABASE_URL)

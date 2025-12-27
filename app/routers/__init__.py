@@ -1,11 +1,5 @@
 # API Routers
-from app.routers import users
-from app.routers import landlords
-from app.routers import clients
-from app.routers import apartments
-from app.routers import photos
-from app.routers import bookings
-from app.routers import payments
+from app.routers import apartments, bookings, clients, landlords, payments, photos, users
 
 __all__ = [
     "users",

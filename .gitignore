@@ -62,3 +62,18 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 /generated/prisma
+
+# Python virtual environment
+venv/
+.venv/
+env/
+
+# pytest
+.pytest_cache/
+htmlcov/
+
+# ruff
+.ruff_cache/
+
+# CI logs
+ci-logs/

@@ -1,12 +1,11 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.database import engine
 from app.models import Base
-from app.routers import users, landlords, clients, apartments, photos, bookings, payments
-from dotenv import load_dotenv
-# Load environment variables from .env file
-load_dotenv() 
+from app.routers import apartments, bookings, clients, landlords, payments, photos, users
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -20,7 +19,7 @@ app = FastAPI(
     title="Posutochka API",
     description="API for apartment rental service",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Include routers
@@ -47,4 +46,5 @@ def health_check():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

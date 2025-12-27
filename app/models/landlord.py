@@ -1,30 +1,28 @@
-from sqlalchemy import Integer, String, ForeignKey
+from typing import TYPE_CHECKING
+
+from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from typing import TYPE_CHECKING, List
 
 from app.models.base import Base
 
 if TYPE_CHECKING:
-    from app.models.user import User
     from app.models.booking import Booking
+    from app.models.user import User
 
 
 class Landlord(Base):
     """Landlord model - represents a property owner."""
+
     __tablename__ = "landlord"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("user.id"),
-        unique=True,
-        nullable=False
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), unique=True, nullable=False)
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="landlord")
-    bookings: Mapped[List["Booking"]] = relationship(back_populates="landlord")
+    bookings: Mapped[list["Booking"]] = relationship(back_populates="landlord")
 
     def __repr__(self) -> str:
         return f"Landlord(id={self.id}, name='{self.first_name} {self.last_name}')"
