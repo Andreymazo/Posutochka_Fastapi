@@ -28,11 +28,17 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    # Create enums
-    user_role_enum = sa.Enum("landlord", "client", name="user_role")
-    booking_status_enum = sa.Enum("pending", "confirmed", "cancelled", name="booking_status")
-    payment_status_enum = sa.Enum("paid", "pending", "failed", name="payment_status")
+    # Create enums explicitly with checkfirst=True to handle cases
+    # where the types may already exist in the database
+    user_role_enum = sa.Enum("landlord", "client", name="user_role", create_type=False)
+    booking_status_enum = sa.Enum(
+        "pending", "confirmed", "cancelled", name="booking_status", create_type=False
+    )
+    payment_status_enum = sa.Enum(
+        "paid", "pending", "failed", name="payment_status", create_type=False
+    )
 
+    # Create enum types in PostgreSQL before creating tables
     user_role_enum.create(op.get_bind(), checkfirst=True)
     booking_status_enum.create(op.get_bind(), checkfirst=True)
     payment_status_enum.create(op.get_bind(), checkfirst=True)
