@@ -10,7 +10,7 @@ router = APIRouter(prefix="/photos", tags=["photos"])
 
 @router.get("/", response_model=list[PhotoRead])
 def get_photos(
-    apartment_id: int = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
+    apartment_id: int | None = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ) -> list[Photo]:
     """Get all photos with optional apartment filter and pagination."""
     query = db.query(Photo)

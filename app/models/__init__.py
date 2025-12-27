@@ -9,12 +9,12 @@ from app.models.photo import Photo
 from app.models.user import User
 
 __all__ = [
-    "Base",
-    "User",
-    "Landlord",
-    "Client",
     "Apartment",
-    "Photo",
+    "Base",
     "Booking",
+    "Client",
+    "Landlord",
     "Payment",
+    "Photo",
+    "User",
 ]
