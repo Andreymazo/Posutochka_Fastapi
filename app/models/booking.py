@@ -23,7 +23,8 @@ class Booking(Base):
     end_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     cost: Mapped[float] = mapped_column(Float, nullable=False)
     booking_status: Mapped[str] = mapped_column(
-        Enum("pending", "confirmed", "cancelled", name="booking_status"), nullable=False
+        Enum("pending", "confirmed", "cancelled", name="booking_status", create_type=False),
+        nullable=False,
     )
 
     # Foreign keys
