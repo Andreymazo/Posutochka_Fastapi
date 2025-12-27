@@ -20,7 +20,8 @@ class Payment(Base):
     amount: Mapped[float] = mapped_column(Float, nullable=False)
     payment_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     payment_status: Mapped[str] = mapped_column(
-        Enum("paid", "pending", "failed", name="payment_status"), nullable=False
+        Enum("paid", "pending", "failed", name="payment_status", create_type=False),
+        nullable=False,
     )
 
     # Relationships
