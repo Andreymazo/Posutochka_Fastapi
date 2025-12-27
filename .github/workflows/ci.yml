@@ -5,6 +5,16 @@ on:
     branches: [main, master]
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Version bump type (for manual release)'
+        required: false
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -103,3 +113,80 @@ jobs:
           docker logs test-container || true
           docker stop test-container || true
           docker rm test-container || true
+
+  # Check for changelog fragments in PRs
+  changelog:
+    name: Changelog Fragment Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changelog fragments
+        run: |
+          # Get list of fragment files (excluding README)
+          FRAGMENTS=$(find changelog.d -name "*.md" ! -name "README.md" 2>/dev/null | wc -l)
+
+          # Get changed files in PR
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD 2>/dev/null || echo "")
+
+          # Check if any source files changed (excluding docs and config)
+          SOURCE_CHANGED=$(echo "$CHANGED_FILES" | grep -E "^(app/|tests/|scripts/|alembic/)" | wc -l)
+
+          if [ "$SOURCE_CHANGED" -gt 0 ] && [ "$FRAGMENTS" -eq 0 ]; then
+            echo "::warning::No changelog fragment found in changelog.d/. Consider documenting significant changes."
+            echo ""
+            echo "To create a changelog fragment, add a .md file to changelog.d/ describing your changes."
+          fi
+
+          echo "✓ Changelog check passed"
+
+  # Automatic release on push to main (if version changed)
+  auto-release:
+    name: Auto Release
+    needs: [lint, test, build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if version changed
+        id: version_check
+        run: |
+          # Get current version from pyproject.toml
+          CURRENT_VERSION=$(grep -Po '(?<=^version = ")[^"]*' pyproject.toml)
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+          # Check if tag exists
+          if git rev-parse "v$CURRENT_VERSION" >/dev/null 2>&1; then
+            echo "Tag v$CURRENT_VERSION already exists, skipping release"
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "New version detected: $CURRENT_VERSION"
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        if: steps.version_check.outputs.should_release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version_check.outputs.current_version }}"
+
+          # Create release notes from changelog if available
+          if [ -f CHANGELOG.md ]; then
+            NOTES=$(sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | head -n -1 || echo "Release v$VERSION")
+          else
+            NOTES="Release v$VERSION"
+          fi
+
+          gh release create "v$VERSION" \
+            --title "v$VERSION" \
+            --notes "$NOTES" \
+            --target main
