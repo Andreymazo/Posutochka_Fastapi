@@ -1,14 +1,5 @@
 from datetime import datetime
-from enum import Enum
-
 from pydantic import BaseModel, EmailStr, Field
-
-
-class UserRole(str, Enum):
-    """User role enumeration."""
-
-    landlord = "landlord"
-    client = "client"
 
 
 class UserBase(BaseModel):
@@ -16,14 +7,14 @@ class UserBase(BaseModel):
 
     email: EmailStr
     phone_number: str = Field(..., max_length=15)
-    role: UserRole
+   
     telegram_username: str | None = Field(None, max_length=32)
 
 
 class UserCreate(UserBase):
     """Schema for creating a new User."""
 
-    password: str = Field(..., min_length=6)
+    password_hash: str = Field(..., min_length=6)
 
 
 class UserUpdate(BaseModel):

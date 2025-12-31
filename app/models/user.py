@@ -20,9 +20,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     phone_number: Mapped[str] = mapped_column(String(15), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[str] = mapped_column(
-        Enum("landlord", "client", name="user_role", create_type=False), nullable=False
-    )
+   
     registration_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     telegram_username: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
