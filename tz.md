@@ -152,3 +152,63 @@ ___________________________
 Алембик. провел миграцию, добавил геополе location в модель Apartment. когда  пытаюсь наполнить данными таблицу запускаю python seed_create_user_landlord_client.py то ошибка  raise PydanticSchemaGenerationError(pydantic.errors.PydanticSchemaGenerationError: Unable to generate pydantic-core schema for <class 'geoalchemy2.types.Geography'>. Set `arbitrary_types_allowed=True` in the model_config to ignore this error or implement `__get_pydantic_core_schema__` on your type to fully support it.
 If you got this error by calling handler(<some type>) within `__get_pydantic_core_schema__` then you likely need to call `handler.generate_schema(<some type>)` since we do not call `__get_pydantic_core_schema__` on `<some type>` otherwise to avoid infinite recursion. посмотри как предлагает документация решить https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.arbitrary_types_allowed
 
+
+. ERROR tests/test_apartments.py::TestApartmentEndpoints::test_delete_apartmen
+... t_not_found - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) ne
+... ar "POINT": syntax error
+... 1 warning, 13 errors in 4.21s
+The error you're encountering is related to the creation of a table with a `geography` column type, which SQLite does not support natively. SQLite supports `geometry` instead of 
+`geography`. The issue appears when creating tables using SQLAlchemy and connecting through SQLite.
+
+Here's how you can address this problem:
+
+1. **Change Geography Type**: Modify your model or schema to use the appropriate geography type for SQLite, which is `GEOMETRY`.
+
+2. **Ensure Proper Database Engine Configuration**: Make sure that your database engine configuration in SQLAlchemy points to a dialect that supports the correct spatial types (e.g., 
+PostgreSQL for proper `geography` support).
+
+3. **Adjust Test Environment**: If you're using an SQLite test environment, consider switching to another dialect like PostgreSQL for testing spatial data.
+
+### Solution
+
+#### Step 1: Change Geography Type
+Update your model or schema definition in SQLAlchemy to use the correct type:
+
+```python
+from sqlalchemy import Column, Float, Integer, String, MetaData, Table
+from sqlalchemy.dialects.sqlite import GEOMETRY as SQLiteGeometry
+
+metadata = MetaData()
+
+apartment_table = Table(
+    'apartment',
+    metadata,
+    Column('id', Integer, primary_key=True),
+    Column('name', String(255), nullable=False),
+    Column('description', String()),
+    Column('price_per_night', Float, nullable=False),
+    Column('address', String(255), nullable=False),
+    # Use GEOMETRY instead of geography
+    Column('location', SQLiteGeometry(geometry_type='POINT', srid=4326), nullable=False)
+)
+```
+
+#### Step 2: Adjust Database Engine Configuration
+Ensure your SQLAlchemy engine configuration uses the correct dialect for your database:
+
+```python
+from sqlalchemy import create_engine
+
+# Example for PostgreSQL
+engine = create_engine('postgresql://user:password@localhost/dbname')
+
+# If you're using SQLite, ensure it's a proper connection string:
+# engine = create_engine('sqlite:///test.db')
+```
+
+### Additional Considerations
+- **Testing**: Ensure your tests are run against the correct database dialect. You might need to set up different test environments for PostgreSQL and SQLite.
+- **Documentation**: Make sure that any documentation or setup instructions clearly state which spatial types are supported by each database.
+
+By making these adjustments, you should be able to resolve the error related to unsupported `geography` type in SQLite and proceed with testing your application properly.
+
