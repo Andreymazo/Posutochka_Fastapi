@@ -37,7 +37,6 @@ class ApartmentRead(BaseModel):
     # Добавьте поле для объекта Geography
     model_config = {"from_attributes": True}
     location: Geography
-   
     id: int
     name: str
     description: str | None = None
