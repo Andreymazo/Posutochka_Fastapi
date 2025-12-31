@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -7,7 +8,7 @@ class UserBase(BaseModel):
 
     email: EmailStr
     phone_number: str = Field(..., max_length=15)
-   
+
     telegram_username: str | None = Field(None, max_length=32)
 
 

@@ -54,7 +54,17 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # Allow unused imports in __init__.py
-"alembic/versions/*.py" = ["E501"]  # Allow long lines in migrations
+"alembic/versions/*.py" = [
+    "E402",   # Allow imports not at top of file in migrations
+    "E501",   # Allow long lines in migrations
+    "I001",   # Allow unsorted imports in auto-generated migrations
+    "Q000",   # Allow single quotes in auto-generated migrations
+    "UP007",  # Allow Union types in auto-generated migrations
+    "UP035",  # Allow typing imports in auto-generated migrations
+    "RUF003", # Allow ambiguous unicode characters (Russian comments)
+    "W291",   # Allow trailing whitespace in auto-generated migrations
+    "W293",   # Allow blank line whitespace in auto-generated migrations
+]
 "tests/**/*.py" = [
     "ARG",     # allow unused arguments in tests (fixtures)
     "PT019",   # allow lifespan function parameter pattern

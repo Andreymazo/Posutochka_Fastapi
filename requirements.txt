@@ -17,6 +17,7 @@ email_validator==2.2.0
 fastapi==0.127.0
 filelock==3.20.1
 frozenlist==1.8.0
+geoalchemy2==0.17.1
 greenlet==3.3.0
 h11==0.16.0
 identify==2.6.15
