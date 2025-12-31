@@ -37,6 +37,7 @@ class ApartmentUpdate(BaseModel):
 class ApartmentRead(ApartmentBase):
     """Schema for reading Apartment data (response)."""
     # Добавьте поле для объекта Geography
+    model_config = {"from_attributes": True}
     location: Geography
 
    
@@ -49,5 +50,5 @@ class ApartmentRead(ApartmentBase):
     # Используем аннотацию типа для списка PhotoRead
     photos: List[PhotoRead] = []
 
-    model_config = {"from_attributes": True}
+    
 
