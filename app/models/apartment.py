@@ -2,6 +2,8 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import Float, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from geoalchemy2.types import Geography
+
 
 from app.models.base import Base
 
@@ -21,11 +23,12 @@ class Apartment(Base):
     price_per_night: Mapped[float] = mapped_column(Float, nullable=False)
     address: Mapped[str] = mapped_column(String(255), nullable=False)
     # Note: GeoAlchemy2 Geography type can be added when PostGIS is available
-    # location: Mapped[Geography] = mapped_column(Geography(geometry_type='POINT', srid=4326))
-
+    location: Mapped[Geography] = mapped_column(Geography(geometry_type='POINT', srid=4326))
+    
     # Relationships
-    photos: Mapped[list["Photo"]] = relationship(back_populates="apartment")
-    bookings: Mapped[list["Booking"]] = relationship(back_populates="apartment")
+    photos: Mapped[list["Photo"]] = relationship(back_populates="apartment", \
+        cascade="all, delete-orphan", uselist=True)
+    bookings: Mapped[list["Booking"]] = relationship(back_populates="apartment", uselist=True)
 
     def __repr__(self) -> str:
         return (

@@ -1,7 +1,8 @@
 from datetime import datetime
 from enum import Enum
-
+from typing import List
 from pydantic import BaseModel, Field
+from app.schemas.payment import PaymentRead
 
 
 class BookingStatus(str, Enum):
@@ -45,5 +46,6 @@ class BookingRead(BookingBase):
     landlord_id: int
     client_id: int
     apartment_id: int
-
+    payments: List[PaymentRead] = []
+    
     model_config = {"from_attributes": True}
