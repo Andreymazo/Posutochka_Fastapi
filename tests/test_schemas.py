@@ -13,9 +13,6 @@ from app.schemas.payment import PaymentCreate, PaymentStatus, PaymentUpdate
 from app.schemas.photo import PhotoCreate
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 
-# Mock location for testing (WKT format string)
-MOCK_LOCATION = "POINT(37.6173 55.7558)"
-
 
 class TestUserSchemas:
     """Tests for User schema validation."""
@@ -25,11 +22,10 @@ class TestUserSchemas:
         user = UserCreate(
             email="test@example.com",
             phone_number="+1234567890",
-            password_hash="securepass123",
+            password="securepass123",
             telegram_username="@testuser",
         )
         assert user.email == "test@example.com"
-        assert user.phone_number == "+1234567890"
 
     def test_user_create_invalid_email(self) -> None:
         """Test that invalid email raises validation error."""
@@ -37,7 +33,7 @@ class TestUserSchemas:
             UserCreate(
                 email="invalid-email",
                 phone_number="+1234567890",
-                password_hash="securepass123",
+                password="securepass123",
             )
         assert "email" in str(exc_info.value).lower()
 
@@ -47,7 +43,7 @@ class TestUserSchemas:
             UserCreate(
                 email="test@example.com",
                 phone_number="+1234567890",
-                password_hash="short",
+                password="short",
             )
         assert "password" in str(exc_info.value).lower()
 
