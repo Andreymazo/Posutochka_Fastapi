@@ -104,8 +104,7 @@ def sample_user_data() -> dict[str, Any]:
     return {
         "email": "test@example.com",
         "phone_number": "+1234567890",
-        "password": "securepassword123",
-        "role": "landlord",
+        "password_hash": "securepassword123",
         "telegram_username": "@testuser",
     }
 
@@ -173,8 +172,7 @@ def created_user(db_session: Session, sample_user_data: dict[str, Any]) -> User:
     user = User(
         email=sample_user_data["email"],
         phone_number=sample_user_data["phone_number"],
-        password_hash=sample_user_data["password"],
-        role=sample_user_data["role"],
+        password_hash=sample_user_data["password_hash"],
         telegram_username=sample_user_data["telegram_username"],
     )
     db_session.add(user)
@@ -221,7 +219,6 @@ def created_client_user(db_session: Session) -> User:
         email="client@example.com",
         phone_number="+0987654321",
         password_hash="clientpassword123",
-        role="client",
     )
     db_session.add(user)
     db_session.commit()

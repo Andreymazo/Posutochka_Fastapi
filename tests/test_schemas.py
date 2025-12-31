@@ -5,13 +5,16 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.apartment import ApartmentCreate, ApartmentUpdate
+from app.schemas.apartment import ApartmentCreate, ApartmentUpdate, Geography
 from app.schemas.booking import BookingCreate, BookingStatus, BookingUpdate
 from app.schemas.client import ClientCreate, ClientUpdate
 from app.schemas.landlord import LandlordCreate, LandlordUpdate
 from app.schemas.payment import PaymentCreate, PaymentStatus, PaymentUpdate
 from app.schemas.photo import PhotoCreate
-from app.schemas.user import UserCreate, UserRead, UserRole, UserUpdate
+from app.schemas.user import UserCreate, UserRead, UserUpdate
+
+# Mock location for testing (using the Geography class defined in the schema)
+MOCK_LOCATION = Geography()
 
 
 class TestUserSchemas:
@@ -22,12 +25,11 @@ class TestUserSchemas:
         user = UserCreate(
             email="test@example.com",
             phone_number="+1234567890",
-            password="securepass123",
-            role=UserRole.landlord,
+            password_hash="securepass123",
             telegram_username="@testuser",
         )
         assert user.email == "test@example.com"
-        assert user.role == UserRole.landlord
+        assert user.phone_number == "+1234567890"
 
     def test_user_create_invalid_email(self) -> None:
         """Test that invalid email raises validation error."""
@@ -35,19 +37,17 @@ class TestUserSchemas:
             UserCreate(
                 email="invalid-email",
                 phone_number="+1234567890",
-                password="securepass123",
-                role=UserRole.landlord,
+                password_hash="securepass123",
             )
         assert "email" in str(exc_info.value).lower()
 
     def test_user_create_short_password(self) -> None:
-        """Test that password shorter than 6 characters raises error."""
+        """Test that password_hash shorter than 6 characters raises error."""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
                 email="test@example.com",
                 phone_number="+1234567890",
-                password="short",
-                role=UserRole.client,
+                password_hash="short",
             )
         assert "password" in str(exc_info.value).lower()
 
@@ -65,7 +65,6 @@ class TestUserSchemas:
             id = 1
             email = "test@example.com"
             phone_number = "+1234567890"
-            role = "landlord"
             registration_date = datetime.now(tz=UTC)
             telegram_username = None
 
@@ -84,6 +83,7 @@ class TestApartmentSchemas:
             description="A beautiful apartment",
             price_per_night=50.0,
             address="123 Main Street",
+            location=MOCK_LOCATION,
         )
         assert apartment.name == "Cozy Studio"
         assert apartment.price_per_night == 50.0
@@ -95,6 +95,7 @@ class TestApartmentSchemas:
                 name="Test Apartment",
                 price_per_night=-50.0,
                 address="123 Main Street",
+                location=MOCK_LOCATION,
             )
         assert "price_per_night" in str(exc_info.value).lower()
 
@@ -105,6 +106,7 @@ class TestApartmentSchemas:
                 name="Test Apartment",
                 price_per_night=0,
                 address="123 Main Street",
+                location=MOCK_LOCATION,
             )
         assert "price_per_night" in str(exc_info.value).lower()
 
