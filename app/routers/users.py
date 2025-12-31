@@ -45,7 +45,7 @@ def create_user(user_data: UserCreate, db: Session = Depends(get_db)) -> User:
     user = User(
         email=user_data.email,
         phone_number=user_data.phone_number,
-        password_hash=user_data.password,  # TODO: Hash password
+        password_hash=user_data.password_hash,  # Already hashed in real app
         telegram_username=user_data.telegram_username,
     )
     db.add(user)

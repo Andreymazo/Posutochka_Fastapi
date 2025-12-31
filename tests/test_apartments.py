@@ -28,6 +28,7 @@ class TestApartmentEndpoints:
             "name": "Simple Studio",
             "price_per_night": 40.0,
             "address": "456 Oak Avenue",
+            "location": "POINT(30.3351 59.9343)",
         }
         response = client.post("/apartments/", json=apartment_data)
         assert response.status_code == 201
@@ -41,6 +42,7 @@ class TestApartmentEndpoints:
             "name": "Test Apartment",
             "price_per_night": -50.0,
             "address": "123 Main Street",
+            "location": "POINT(30.3351 59.9343)",
         }
         response = client.post("/apartments/", json=apartment_data)
         assert response.status_code == 422  # Validation error

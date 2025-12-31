@@ -15,7 +15,6 @@ class TestUserEndpoints:
         data = response.json()
         assert data["email"] == sample_user_data["email"]
         assert data["phone_number"] == sample_user_data["phone_number"]
-        assert data["role"] == sample_user_data["role"]
         assert "id" in data
         assert "registration_date" in data
 

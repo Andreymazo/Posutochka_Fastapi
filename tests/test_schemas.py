@@ -39,7 +39,7 @@ class TestUserSchemas:
         assert "email" in str(exc_info.value).lower()
 
     def test_user_create_short_password(self) -> None:
-        """Test that password shorter than 6 characters raises error."""
+        """Test that password_hash shorter than 6 characters raises error."""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
                 email="test@example.com",
@@ -80,8 +80,7 @@ class TestApartmentSchemas:
             description="A beautiful apartment",
             price_per_night=50.0,
             address="123 Main Street",
-            location=from_shape(Point(1, 2), srid=4326)
-            # Geography(geometry_type='POINT', srid=4326, dimension=2, from_text='ST_GeogFromText', name='geography',
+            location=MOCK_LOCATION,
         )
         assert apartment.name == "Cozy Studio"
         assert apartment.price_per_night == 50.0
@@ -93,6 +92,7 @@ class TestApartmentSchemas:
                 name="Test Apartment",
                 price_per_night=-50.0,
                 address="123 Main Street",
+                location=MOCK_LOCATION,
             )
         assert "price_per_night" in str(exc_info.value).lower()
 
@@ -103,6 +103,7 @@ class TestApartmentSchemas:
                 name="Test Apartment",
                 price_per_night=0,
                 address="123 Main Street",
+                location=MOCK_LOCATION,
             )
         assert "price_per_night" in str(exc_info.value).lower()
 

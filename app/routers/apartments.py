@@ -34,8 +34,7 @@ def create_apartment(apartment_data: ApartmentCreate, db: Session = Depends(get_
         description=apartment_data.description,
         price_per_night=apartment_data.price_per_night,
         address=apartment_data.address,
-        location=apartment_data.location  
-
+        location=apartment_data.location,
     )
     db.add(apartment)
     db.commit()
