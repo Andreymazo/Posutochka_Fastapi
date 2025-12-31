@@ -19,6 +19,7 @@ class TestApartmentEndpoints:
         assert data["description"] == sample_apartment_data["description"]
         assert data["price_per_night"] == sample_apartment_data["price_per_night"]
         assert data["address"] == sample_apartment_data["address"]
+        assert data["location"] == sample_apartment_data["location"]
         assert "id" in data
 
     def test_create_apartment_without_description(self, client: TestClient) -> None:

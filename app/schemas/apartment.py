@@ -1,16 +1,13 @@
 from pydantic import BaseModel, Field, ConfigDict
-from geoalchemy2.types import Geography, _GISType
+from geoalchemy2.types import Geography
 from app.schemas.photo import PhotoRead
 from typing import List
 
-# This is not a pydantic model, it's an arbitrary class
-class Geography(_GISType):
-    pass
+
 class ApartmentBase(BaseModel):
     """Base schema for Apartment - common fields."""
     model_config = ConfigDict(arbitrary_types_allowed=True)
     location: Geography 
-    
     name: str = Field(..., max_length=255)
     description: str | None = None
     price_per_night: float = Field(..., gt=0)
@@ -36,7 +33,6 @@ class ApartmentRead(ApartmentBase):
     # Добавьте поле для объекта Geography
     model_config = {"from_attributes": True}
     location: Geography
-   
     id: int
     name: str
     description: str | None = None
@@ -44,6 +40,3 @@ class ApartmentRead(ApartmentBase):
     address: str
     # Используем аннотацию типа для списка PhotoRead
     photos: List[PhotoRead] = []
-
-    
-

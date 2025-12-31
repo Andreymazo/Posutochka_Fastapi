@@ -12,7 +12,8 @@ from app.schemas.landlord import LandlordCreate, LandlordUpdate
 from app.schemas.payment import PaymentCreate, PaymentStatus, PaymentUpdate
 from app.schemas.photo import PhotoCreate
 from app.schemas.user import UserCreate, UserRead, UserUpdate
-
+from geoalchemy2.shape import from_shape
+from shapely.geometry import Point
 
 class TestUserSchemas:
     """Tests for User schema validation."""
@@ -79,6 +80,8 @@ class TestApartmentSchemas:
             description="A beautiful apartment",
             price_per_night=50.0,
             address="123 Main Street",
+            location=from_shape(Point(1, 2), srid=4326)
+            # Geography(geometry_type='POINT', srid=4326, dimension=2, from_text='ST_GeogFromText', name='geography',
         )
         assert apartment.name == "Cozy Studio"
         assert apartment.price_per_night == 50.0
