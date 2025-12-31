@@ -277,3 +277,5 @@ docker exec -it your-postgres-container psql -U postgres -c "CREATE EXTENSION IF
 После выполнения этих изменений, попробуйте снова сгенерировать миграцию и применить её к вашей базе данных.
 
 _____________________
+
+https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.validate_assignment

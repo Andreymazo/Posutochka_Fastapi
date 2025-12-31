@@ -147,4 +147,8 @@
 
 #### Frontend
 - **Технологии**: Использование Telegram bot API и веб-интерфейса для взаимодействия пользователей.
+___________________________
+
+Алембик. провел миграцию, добавил геополе location в модель Apartment. когда  пытаюсь наполнить данными таблицу запускаю python seed_create_user_landlord_client.py то ошибка  raise PydanticSchemaGenerationError(pydantic.errors.PydanticSchemaGenerationError: Unable to generate pydantic-core schema for <class 'geoalchemy2.types.Geography'>. Set `arbitrary_types_allowed=True` in the model_config to ignore this error or implement `__get_pydantic_core_schema__` on your type to fully support it.
+If you got this error by calling handler(<some type>) within `__get_pydantic_core_schema__` then you likely need to call `handler.generate_schema(<some type>)` since we do not call `__get_pydantic_core_schema__` on `<some type>` otherwise to avoid infinite recursion. посмотри как предлагает документация решить https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.arbitrary_types_allowed
 
