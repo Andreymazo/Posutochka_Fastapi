@@ -36,6 +36,9 @@ class ApartmentUpdate(BaseModel):
 
 class ApartmentRead(BaseModel):
     """Schema for reading Apartment data (response)."""
+    # Добавьте поле для объекта Geography
+    model_config = {"from_attributes": True}
+    location: Geography
 
     model_config = {"from_attributes": True, "arbitrary_types_allowed": True}
 
@@ -44,8 +47,11 @@ class ApartmentRead(BaseModel):
     description: str | None = None
     price_per_night: float
     address: str
-    location: Any = None
-    photos: list[PhotoRead] = []
+ 
+    # Используем аннотацию типа для списка PhotoRead
+    photos: List[PhotoRead] = []
+
+    
 
     @field_validator("location", mode="before")
     @classmethod
