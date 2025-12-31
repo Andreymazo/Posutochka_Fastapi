@@ -61,7 +61,10 @@ class ApartmentRead(BaseModel):
             # WKBElement has a data attribute containing bytes
             if hasattr(v, "data"):
                 geom = wkb.loads(bytes(v.data))
-                return geom.wkt
-            return str(v)
+                wkt_str: str = str(geom.wkt)
+                return wkt_str
+            converted: str = str(v)
+            return converted
         except Exception:
-            return str(v)
+            fallback: str = str(v)
+            return fallback
