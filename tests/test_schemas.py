@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.apartment import ApartmentCreate, ApartmentUpdate, Geography
+from app.schemas.apartment import ApartmentCreate, ApartmentUpdate
 from app.schemas.booking import BookingCreate, BookingStatus, BookingUpdate
 from app.schemas.client import ClientCreate, ClientUpdate
 from app.schemas.landlord import LandlordCreate, LandlordUpdate
@@ -13,8 +13,8 @@ from app.schemas.payment import PaymentCreate, PaymentStatus, PaymentUpdate
 from app.schemas.photo import PhotoCreate
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 
-# Mock location for testing (using the Geography class defined in the schema)
-MOCK_LOCATION = Geography()
+# Mock location for testing (WKT format string)
+MOCK_LOCATION = "POINT(37.6173 55.7558)"
 
 
 class TestUserSchemas:
