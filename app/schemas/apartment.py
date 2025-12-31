@@ -16,8 +16,6 @@ class ApartmentBase(BaseModel):
     price_per_night: float = Field(..., gt=0)
     address: str = Field(..., max_length=255)
     
-    
-    
 
 class ApartmentCreate(ApartmentBase):
     """Schema for creating a new Apartment."""
@@ -31,22 +29,19 @@ class ApartmentUpdate(BaseModel):
     description: str | None = None
     price_per_night: float | None = Field(None, gt=0)
     address: str | None = Field(None, max_length=255)
-    
- 
+     
 
 class ApartmentRead(ApartmentBase):
     """Schema for reading Apartment data (response)."""
     # Добавьте поле для объекта Geography
     model_config = {"from_attributes": True}
     location: Geography
-
    
     id: int
     name: str
     description: str | None = None
     price_per_night: float
     address: str
- 
     # Используем аннотацию типа для списка PhotoRead
     photos: List[PhotoRead] = []
 

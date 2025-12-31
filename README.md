@@ -279,3 +279,6 @@ docker exec -it your-postgres-container psql -U postgres -c "CREATE EXTENSION IF
 _____________________
 
 https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.validate_assignment
+
+pytest tests/ -v --tb=short --cov=app --cov-report=xml --co
+v-report=term

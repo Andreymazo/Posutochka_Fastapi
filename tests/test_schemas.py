@@ -11,7 +11,7 @@ from app.schemas.client import ClientCreate, ClientUpdate
 from app.schemas.landlord import LandlordCreate, LandlordUpdate
 from app.schemas.payment import PaymentCreate, PaymentStatus, PaymentUpdate
 from app.schemas.photo import PhotoCreate
-from app.schemas.user import UserCreate, UserRead, UserRole, UserUpdate
+from app.schemas.user import UserCreate, UserRead, UserUpdate
 
 
 class TestUserSchemas:
@@ -23,11 +23,9 @@ class TestUserSchemas:
             email="test@example.com",
             phone_number="+1234567890",
             password="securepass123",
-            role=UserRole.landlord,
             telegram_username="@testuser",
         )
         assert user.email == "test@example.com"
-        assert user.role == UserRole.landlord
 
     def test_user_create_invalid_email(self) -> None:
         """Test that invalid email raises validation error."""
@@ -36,7 +34,6 @@ class TestUserSchemas:
                 email="invalid-email",
                 phone_number="+1234567890",
                 password="securepass123",
-                role=UserRole.landlord,
             )
         assert "email" in str(exc_info.value).lower()
 
@@ -47,7 +44,6 @@ class TestUserSchemas:
                 email="test@example.com",
                 phone_number="+1234567890",
                 password="short",
-                role=UserRole.client,
             )
         assert "password" in str(exc_info.value).lower()
 
@@ -65,7 +61,6 @@ class TestUserSchemas:
             id = 1
             email = "test@example.com"
             phone_number = "+1234567890"
-            role = "landlord"
             registration_date = datetime.now(tz=UTC)
             telegram_username = None
 
