@@ -1,5 +1,6 @@
 """Shared test fixtures and configuration."""
 
+import os
 from collections.abc import Generator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -15,14 +16,20 @@ from app.database import get_db
 from app.models import Apartment, Base, Client, Landlord, User
 from app.routers import apartments, bookings, clients, landlords, payments, photos, users
 
-# Create in-memory SQLite database for testing
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+# Use DATABASE_URL from environment if available (PostgreSQL in CI), otherwise use SQLite
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL:
+    # PostgreSQL configuration
+    test_engine = create_engine(DATABASE_URL)
+else:
+    # Fallback to SQLite for local development without PostgreSQL
+    # Note: Geography type will be compiled to TEXT for SQLite tests
+    test_engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
 
-test_engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
 
@@ -31,7 +38,7 @@ def create_test_app() -> FastAPI:
 
     @asynccontextmanager
     async def test_lifespan(_app: FastAPI):
-        """Test lifespan that uses SQLite instead of PostgreSQL."""
+        """Test lifespan that creates tables for testing."""
         Base.metadata.create_all(bind=test_engine)
         yield
 
