@@ -1,6 +1,7 @@
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from shapely import wkb
 
 from app.schemas.photo import PhotoRead
 
@@ -43,5 +44,24 @@ class ApartmentRead(BaseModel):
     description: str | None = None
     price_per_night: float
     address: str
-    location: Any = None  # Use Any to handle Geography type from database
+    location: Any = None
     photos: list[PhotoRead] = []
+
+    @field_validator("location", mode="before")
+    @classmethod
+    def convert_location(cls, v: Any) -> str | None:
+        """Convert WKBElement to WKT string."""
+        if v is None:
+            return None
+        # If it's already a string, return as-is
+        if isinstance(v, str):
+            return v
+        # If it's a WKBElement from GeoAlchemy2, convert to WKT
+        try:
+            # WKBElement has a data attribute containing bytes
+            if hasattr(v, "data"):
+                geom = wkb.loads(bytes(v.data))
+                return geom.wkt
+            return str(v)
+        except Exception:
+            return str(v)
