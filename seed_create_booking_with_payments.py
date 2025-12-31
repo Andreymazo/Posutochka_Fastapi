@@ -123,7 +123,9 @@ def create_booking_with_payments() -> None:
         print("\nVerifying relationship:")
         print(f"Booking {db_booking.id} has {len(db_booking.payments)} payment(s):")
         for payment in db_booking.payments:
-            print(f"  - Payment {payment.id}: amount={payment.amount}, status={payment.payment_status}")
+            print(
+                f"  - Payment {payment.id}: amount={payment.amount}, status={payment.payment_status}"
+            )
 
         print("\nSeed data created successfully!")
 

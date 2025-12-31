@@ -1,5 +1,6 @@
 """Shared test fixtures and configuration."""
 
+import os
 from collections.abc import Generator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -9,20 +10,23 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.database import get_db
 from app.models import Apartment, Base, Client, Landlord, User
 from app.routers import apartments, bookings, clients, landlords, payments, photos, users
 
-# Create in-memory SQLite database for testing
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+# Use PostgreSQL from environment variable, fallback to SQLite for local testing
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///:memory:")
 
-test_engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
+# Configure engine based on database type
+if DATABASE_URL.startswith("sqlite"):
+    test_engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},
+    )
+else:
+    test_engine = create_engine(DATABASE_URL)
+
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
 
@@ -31,7 +35,7 @@ def create_test_app() -> FastAPI:
 
     @asynccontextmanager
     async def test_lifespan(_app: FastAPI):
-        """Test lifespan that uses SQLite instead of PostgreSQL."""
+        """Test lifespan that creates/drops tables."""
         Base.metadata.create_all(bind=test_engine)
         yield
 
@@ -117,6 +121,7 @@ def sample_apartment_data() -> dict[str, Any]:
         "description": "A beautiful studio apartment in the city center",
         "price_per_night": 50.0,
         "address": "123 Main Street",
+        "location": "POINT(37.6173 55.7558)",  # Moscow coordinates
     }
 
 
@@ -189,6 +194,7 @@ def created_apartment(db_session: Session, sample_apartment_data: dict[str, Any]
         description=sample_apartment_data["description"],
         price_per_night=sample_apartment_data["price_per_night"],
         address=sample_apartment_data["address"],
+        location=sample_apartment_data["location"],
     )
     db_session.add(apartment)
     db_session.commit()
