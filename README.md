@@ -271,7 +271,7 @@ def downgrade():
 
 ```bash
 # Пример команды для установки расширения PostGIS в Docker
-docker exec -it your-postgres-container psql -U postgres -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+docker exec -it containerpostgres psql -U postgres -c "CREATE EXTENSION IF NOT EXISTS postgis;"
 ```
 
 После выполнения этих изменений, попробуйте снова сгенерировать миграцию и применить её к вашей базе данных.
