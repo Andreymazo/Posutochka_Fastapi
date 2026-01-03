@@ -282,3 +282,4 @@ https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.validate
 
 pytest tests/ -v --tb=short --cov=app --cov-report=xml --co
 v-report=term
+pytest -s tests/test_apartments.py

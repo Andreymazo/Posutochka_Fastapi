@@ -1,21 +1,57 @@
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from shapely import wkb
-
+from shapely import wkb, wkt
+from typing import List
 from app.schemas.photo import PhotoRead
-
+from geoalchemy2.types import Geography
+from shapely.geometry import Point
+from typing import Annotated
+from pydantic import BaseModel
+from pydantic_shapely import GeometryField
+from shapely._geometry import GeometryType
+from geoalchemy2.elements import WKBElement
 
 class ApartmentBase(BaseModel):
     """Base schema for Apartment - common fields."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
+    # model_config = ConfigDict(arbitrary_types_allowed=True)
+    # location: Geography
+    location: Annotated[Point, GeometryField()]
     name: str = Field(..., max_length=255)
     description: str | None = None
     price_per_night: float = Field(..., gt=0)
     address: str = Field(..., max_length=255)
     
+    # @field_validator('location', mode='before')
+    # @classmethod
+    # def parse_location(cls, v: Any) -> Any:
+        
+    #     # If the input is a string (like from your fixture), convert it to a Point
+    #     if isinstance(v, str) and v.startswith("POINT"):
+    #         print('4444444444444444444444444444444444444444444444444444444444444444444444444')
+    #         return wkt.loads(v)
+    #     return v
+    
+    # @field_validator('location', mode='before')
+    # @classmethod
+    # def handle_dal_types(cls, v: Any) -> Any:
+    #     # 1. Handle WKBElement (coming FROM the database/SQLAlchemy)
+    #     if isinstance(v, WKBElement):
+    #         # Use wkb.loads to convert binary to Shapely Point
+    #         # We use v.data to get the raw binary hex
+    #         return wkb.loads(bytes(v.data))
+        
+    #     # 2. Handle WKT String (for safety/tests)
+    #     if isinstance(v, str) and v.startswith("POINT"):
+    #         print('4444444444444444444444444444444444444444444444444444444444444444444444443')
+    #         return wkt.loads(v)
+            
+    #     return v
+
+    # class Config:
+    #     from_attributes = True # Ensure Pydantic can read from SQLAlchemy objects
+    #     arbitrary_types_allowed = True
 
 class ApartmentCreate(ApartmentBase):
     """Schema for creating a new Apartment."""
@@ -24,8 +60,9 @@ class ApartmentCreate(ApartmentBase):
 class ApartmentUpdate(BaseModel):
     """Schema for updating an Apartment - all fields optional."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
+    # model_config = ConfigDict(arbitrary_types_allowed=True)
+    # location: Geography
+    location: Annotated[Point, GeometryField()]
     name: str | None = Field(None, max_length=255)
     description: str | None = None
     price_per_night: float | None = Field(None, gt=0)
@@ -34,9 +71,8 @@ class ApartmentUpdate(BaseModel):
 
 class ApartmentRead(BaseModel):
     """Schema for reading Apartment data (response)."""
-    # Добавьте поле для объекта Geography
-    model_config = {"from_attributes": True}
-    location: Geography
+    # model_config = ConfigDict(arbitrary_types_allowed=True)
+    location: Annotated[Point, GeometryField()]
     id: int
     name: str
     description: str | None = None
@@ -44,27 +80,23 @@ class ApartmentRead(BaseModel):
     address: str
     # Используем аннотацию типа для списка PhotoRead
     photos: List[PhotoRead] = []
-
     
-
-    @field_validator("location", mode="before")
+    @field_validator('location', mode='before')
     @classmethod
-    def convert_location(cls, v: Any) -> str | None:
-        """Convert WKBElement to WKT string."""
-        if v is None:
-            return None
-        # If it's already a string, return as-is
-        if isinstance(v, str):
-            return v
-        # If it's a WKBElement from GeoAlchemy2, convert to WKT
-        try:
-            # WKBElement has a data attribute containing bytes
-            if hasattr(v, "data"):
-                geom = wkb.loads(bytes(v.data))
-                wkt_str: str = str(geom.wkt)
-                return wkt_str
-            converted: str = str(v)
-            return converted
-        except Exception:
-            fallback: str = str(v)
-            return fallback
+    def handle_dal_types(cls, v: Any) -> Any:
+        # 1. Handle WKBElement (coming FROM the database/SQLAlchemy)
+        if isinstance(v, WKBElement):
+            # Use wkb.loads to convert binary to Shapely Point
+            # We use v.data to get the raw binary hex
+            print('4444444444444444444444444444444444444444444444444444444444444444444444446')
+            return wkb.loads(bytes(v.data))
+        
+        # 2. Handle WKT String (for safety/tests)
+        if isinstance(v, str) and v.startswith("POINT"):
+            print('4444444444444444444444444444444444444444444444444444444444444444444444445')
+            return wkt.loads(v)
+            
+        return v
+
+ 
+ 

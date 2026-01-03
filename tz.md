@@ -211,4 +211,65 @@ engine = create_engine('postgresql://user:password@localhost/dbname')
 - **Documentation**: Make sure that any documentation or setup instructions clearly state which spatial types are supported by each database.
 
 By making these adjustments, you should be able to resolve the error related to unsupported `geography` type in SQLite and proceed with testing your application properly.
+____________________________________
 
+from typing import Any
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from shapely import wkb
+from typing import List, Annotated
+from app.schemas.photo import PhotoRead
+from geoalchemy2.types import Geography
+from pydantic import BaseModel, GetCoreSchemaHandler, GetJsonSchemaHandler, ValidationError, Field
+from geoalchemy2.types import Geography
+from pydantic_core import core_schema
+from pydantic.json_schema import JsonSchemaValue
+
+
+class _GeographyPydanticAnnotation:
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type: Any, handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:
+        from geoalchemy2.elements import WKBElement
+
+        def encode_geography(value):
+            if isinstance(value, str):
+                return value  # Assuming the string is already a valid WKT or WKB
+            elif isinstance(value, WKBElement):
+                return value.wkb.dumps()
+            else:
+                raise ValueError("Unsupported type for Geography")
+
+        def decode_geography(value):
+            if isinstance(value, bytes):
+                return WKBElement(value, srid=4326)  # Assuming SRID is 4326
+            elif isinstance(value, str):
+                try:
+                    import shapely.wkb
+                    return shapely.wkb.loads(value)
+                except Exception as e:
+                    raise ValueError("Invalid WKT or WKB string") from e
+            else:
+                raise ValueError("Unsupported type for Geography")
+
+        return core_schema.chain_schema([
+            handler(Geography),
+            core_schema.no_info_plain_validator_function(encode_geography),
+            core_schema.plain_serializer_function_ser_schema(lambda v: v.wkb.dumps() if isinstance(v, WKBElement) else v),
+            core_schema.no_info_custom_serializer_function_ser_schema(lambda v: v.dumps() if hasattr(v, 'dumps') else v),
+        ], decoder=decode_geography)
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, core_schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler) -> JsonSchemaValue:
+        return {
+            "title": "Geography",
+            "type": "string",  # Assuming we're using a string representation (WKT or WKB)
+            "example": "POINT(10.0 20.0)"
+        }
+
+# Create an Annotated type for Geography
+GeographyPydantic = Annotated[Geography, _GeographyPydanticAnnotation]
+
+___________________________________
+
+
+todo 
+in aparment key landlord. Ome to many.

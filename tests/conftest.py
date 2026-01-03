@@ -14,6 +14,8 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.database import get_db
 from app.models import Apartment, Base, Client, Landlord, User
 from app.routers import apartments, bookings, clients, landlords, payments, photos, users
+from geoalchemy2.types import Geography
+
 
 # Use PostgreSQL from environment variable, fallback to SQLite for local testing
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///:memory:")
@@ -112,7 +114,6 @@ def sample_user_data() -> dict[str, Any]:
         "telegram_username": "@testuser",
     }
 
-
 @pytest.fixture
 def sample_apartment_data() -> dict[str, Any]:
     """Sample apartment data for testing."""
@@ -121,8 +122,10 @@ def sample_apartment_data() -> dict[str, Any]:
         "description": "A beautiful studio apartment in the city center",
         "price_per_night": 50.0,
         "address": "123 Main Street",
-        "location": "POINT(37.6173 55.7558)",  # Moscow coordinates
+        "location": "POINT (37.6173 55.7558)",  # Moscow coordinates
     }
+ # "location": Point([37.6173, 55.7558])
+        # "location": {"type": "Geography", "coordinates": [37.6173, 55.7558]}#,"ctx":{"class":"Geography"}  # Используйте GeoJSON
 
 
 @pytest.fixture

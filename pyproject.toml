@@ -95,7 +95,6 @@ disallow_untyped_defs = false
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-ra -q --strict-markers"
-asyncio_mode = "auto"
 testpaths = ["tests"]
 
 [tool.coverage.run]
