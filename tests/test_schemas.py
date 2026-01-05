@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
+from shapely.geometry import Point
 
 from app.schemas.apartment import ApartmentCreate, ApartmentUpdate
 from app.schemas.booking import BookingCreate, BookingStatus, BookingUpdate
@@ -12,6 +13,9 @@ from app.schemas.landlord import LandlordCreate, LandlordUpdate
 from app.schemas.payment import PaymentCreate, PaymentStatus, PaymentUpdate
 from app.schemas.photo import PhotoCreate
 from app.schemas.user import UserCreate, UserRead, UserUpdate
+
+# Mock location for testing
+MOCK_LOCATION = Point(37.6173, 55.7558)  # Moscow coordinates
 
 
 class TestUserSchemas:
@@ -80,6 +84,7 @@ class TestApartmentSchemas:
             price_per_night=50.0,
             address="123 Main Street",
             location=MOCK_LOCATION,
+            landlord_id=1,
         )
         assert apartment.name == "Cozy Studio"
         assert apartment.price_per_night == 50.0
@@ -92,6 +97,7 @@ class TestApartmentSchemas:
                 price_per_night=-50.0,
                 address="123 Main Street",
                 location=MOCK_LOCATION,
+                landlord_id=1,
             )
         assert "price_per_night" in str(exc_info.value).lower()
 
@@ -103,6 +109,7 @@ class TestApartmentSchemas:
                 price_per_night=0,
                 address="123 Main Street",
                 location=MOCK_LOCATION,
+                landlord_id=1,
             )
         assert "price_per_night" in str(exc_info.value).lower()
 
