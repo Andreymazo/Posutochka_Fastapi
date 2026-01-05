@@ -14,8 +14,6 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.database import get_db
 from app.models import Apartment, Base, Client, Landlord, User
 from app.routers import apartments, bookings, clients, landlords, payments, photos, users
-from geoalchemy2.types import Geography
-
 
 # Use PostgreSQL from environment variable, fallback to SQLite for local testing
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///:memory:")
@@ -114,8 +112,9 @@ def sample_user_data() -> dict[str, Any]:
         "telegram_username": "@testuser",
     }
 
+
 @pytest.fixture
-def sample_apartment_data() -> dict[str, Any]:
+def sample_apartment_data(created_landlord: Landlord) -> dict[str, Any]:
     """Sample apartment data for testing."""
     return {
         "name": "Cozy Studio",
@@ -123,9 +122,12 @@ def sample_apartment_data() -> dict[str, Any]:
         "price_per_night": 50.0,
         "address": "123 Main Street",
         "location": "POINT (37.6173 55.7558)",  # Moscow coordinates
+        "landlord_id": created_landlord.id,
     }
- # "location": Point([37.6173, 55.7558])
-        # "location": {"type": "Geography", "coordinates": [37.6173, 55.7558]}#,"ctx":{"class":"Geography"}  # Используйте GeoJSON
+
+
+# "location": Point([37.6173, 55.7558])
+# "location": {"type": "Geography", "coordinates": [37.6173, 55.7558]}#,"ctx":{"class":"Geography"}  # Используйте GeoJSON
 
 
 @pytest.fixture
@@ -190,7 +192,9 @@ def created_user(db_session: Session, sample_user_data: dict[str, Any]) -> User:
 
 
 @pytest.fixture
-def created_apartment(db_session: Session, sample_apartment_data: dict[str, Any]) -> Apartment:
+def created_apartment(
+    db_session: Session, created_landlord: Landlord, sample_apartment_data: dict[str, Any]
+) -> Apartment:
     """Create and return an apartment in the database."""
     apartment = Apartment(
         name=sample_apartment_data["name"],
@@ -198,6 +202,7 @@ def created_apartment(db_session: Session, sample_apartment_data: dict[str, Any]
         price_per_night=sample_apartment_data["price_per_night"],
         address=sample_apartment_data["address"],
         location=sample_apartment_data["location"],
+        landlord_id=created_landlord.id,
     )
     db_session.add(apartment)
     db_session.commit()

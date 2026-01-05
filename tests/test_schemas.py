@@ -12,8 +12,7 @@ from app.schemas.landlord import LandlordCreate, LandlordUpdate
 from app.schemas.payment import PaymentCreate, PaymentStatus, PaymentUpdate
 from app.schemas.photo import PhotoCreate
 from app.schemas.user import UserCreate, UserRead, UserUpdate
-from geoalchemy2.shape import from_shape
-from shapely.geometry import Point
+
 
 class TestUserSchemas:
     """Tests for User schema validation."""
