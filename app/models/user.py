@@ -1,5 +1,6 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Optional
+
 from sqlalchemy import DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -20,7 +21,7 @@ class User(Base):
     phone_number: Mapped[str] = mapped_column(String(15), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     # registration_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    registration_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
+    registration_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC))
     telegram_username: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     # Relationships - One-to-One

@@ -13,7 +13,17 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.database import get_db
 from app.models import Apartment, Base, Booking, Client, Landlord, User
-from app.routers import apartments, balances, bookings, clients, landlords, payments, photos, reviews, users
+from app.routers import (
+    apartments,
+    balances,
+    bookings,
+    clients,
+    landlords,
+    payments,
+    photos,
+    reviews,
+    users,
+)
 
 # Use PostgreSQL from environment variable, fallback to SQLite for local testing
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///:memory:")

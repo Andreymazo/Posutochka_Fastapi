@@ -4,7 +4,17 @@ from fastapi import FastAPI
 
 from app.database import engine
 from app.models import Base
-from app.routers import apartments, balances, bookings, clients, landlords, payments, photos, reviews, users
+from app.routers import (
+    apartments,
+    balances,
+    bookings,
+    clients,
+    landlords,
+    payments,
+    photos,
+    reviews,
+    users,
+)
 
 
 @asynccontextmanager

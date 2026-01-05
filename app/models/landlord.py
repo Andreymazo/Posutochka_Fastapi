@@ -8,8 +8,8 @@ from app.models.base import Base
 if TYPE_CHECKING:
     from app.models.apartment import Apartment
     from app.models.booking import Booking
-    from app.models.user import User
     from app.models.review import Review
+    from app.models.user import User
 
 
 class Landlord(Base):

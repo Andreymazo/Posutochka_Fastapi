@@ -1,9 +1,10 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import TYPE_CHECKING
-from sqlalchemy import DateTime, Integer, Numeric, ForeignKey, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from app.models.base import Base
 
+from sqlalchemy import ForeignKey, Integer, Numeric, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.base import Base
 
 if TYPE_CHECKING:
     from app.models.booking import Booking
@@ -24,7 +25,9 @@ class Balance(Base):
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 
     # Foreign keys
-    booking_id: Mapped[int] = mapped_column(ForeignKey("booking.id", ondelete="CASCADE"), nullable=False)
+    booking_id: Mapped[int] = mapped_column(
+        ForeignKey("booking.id", ondelete="CASCADE"), nullable=False
+    )
 
     # Relationships
     # Отношение Many-to-One: много транзакций баланса могут относиться к одной брони
