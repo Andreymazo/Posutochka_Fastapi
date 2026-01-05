@@ -39,6 +39,7 @@ def column_exists(table_name, column_name):
     # Проверяем наличие колонки по имени
     return any(c["name"] == column_name for c in columns)
 
+
 def index_exists(bind, table_name, index_name):
     insp = inspect(bind)
     indexes = insp.get_indexes(table_name)
@@ -70,9 +71,8 @@ def upgrade():
             "apartment",
             ["location"],
             unique=False,
-            postgresql_using="gist"
+            postgresql_using="gist",
         )
-
 
         # op.create_index(
         #     "idx_apartment_location",

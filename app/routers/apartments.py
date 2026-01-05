@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from geoalchemy2.shape import from_shape
 from shapely.geometry.point import Point
+from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.models.apartment import Apartment
 from app.schemas.apartment import ApartmentCreate, ApartmentRead, ApartmentUpdate
-from geoalchemy2.shape import from_shape
 
 router = APIRouter(prefix="/apartments", tags=["apartments"])
 
@@ -29,20 +30,21 @@ def get_apartment(apartment_id: int, db: Session = Depends(get_db)) -> Apartment
 
 @router.post("/", response_model=ApartmentRead, status_code=status.HTTP_201_CREATED)
 def create_apartment(apartment_data: ApartmentCreate, db: Session = Depends(get_db)) -> Apartment:
-     # Use mode='python' to keep the Shapely objects as-is
-    data = apartment_data.model_dump(mode='python')
-    
-    # DEBUG: This MUST be <class 'shapely.geometry.point.Point'>
-    # print(f"DEBUG TYPE: {type(data['location'])}") 
+    # Use mode='python' to keep the Shapely objects as-is
+    data = apartment_data.model_dump(mode="python")
 
-    if not isinstance(data['location'], Point):
+    # DEBUG: This MUST be <class 'shapely.geometry.point.Point'>
+    # print(f"DEBUG TYPE: {type(data['location'])}")
+
+    if not isinstance(data["location"], Point):
         # Fallback if validator didn't fire (e.g. nested models)
         from shapely import wkt
-        data['location'] = wkt.loads(data['location'])
+
+        data["location"] = wkt.loads(data["location"])
 
     # Convert to GeoAlchemy2 WKBElement
-    data['location'] = from_shape(data['location'], srid=4326)
-    
+    data["location"] = from_shape(data["location"], srid=4326)
+
     db_apartment = Apartment(**data)
     db.add(db_apartment)
     db.commit()

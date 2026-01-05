@@ -1,29 +1,27 @@
-from typing import Any
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-from shapely import wkb, wkt
-from typing import List
-from app.schemas.photo import PhotoRead
-from geoalchemy2.types import Geography
-from shapely.geometry import Point
-from typing import Annotated
-from pydantic import BaseModel
-from pydantic_shapely import GeometryField
-from shapely._geometry import GeometryType
+from typing import Annotated, Any
+
 from geoalchemy2.elements import WKBElement
+from pydantic import BaseModel, Field, field_validator
+from pydantic_shapely import GeometryField
+from shapely import wkb, wkt
+from shapely.geometry import Point
+
+from app.schemas.photo import PhotoRead
+
 
 class ApartmentBase(BaseModel):
     """Base schema for Apartment - common fields."""
 
-   
     location: Annotated[Point, GeometryField()]
     name: str = Field(..., max_length=255)
     description: str | None = None
     price_per_night: float = Field(..., gt=0)
     address: str = Field(..., max_length=255)
-    
+
 
 class ApartmentCreate(ApartmentBase):
     """Schema for creating a new Apartment."""
+
     landlord_id: int
 
 
@@ -32,15 +30,16 @@ class ApartmentUpdate(BaseModel):
 
     # model_config = ConfigDict(arbitrary_types_allowed=True)
     # location: Geography
-    location: Annotated[Point, GeometryField()]
+    location: Annotated[Point, GeometryField()] | None = None
     name: str | None = Field(None, max_length=255)
     description: str | None = None
     price_per_night: float | None = Field(None, gt=0)
     address: str | None = Field(None, max_length=255)
-     
+
 
 class ApartmentRead(BaseModel):
     """Schema for reading Apartment data (response)."""
+
     # model_config = ConfigDict(arbitrary_types_allowed=True)
     location: Annotated[Point, GeometryField()]
     id: int
@@ -51,9 +50,9 @@ class ApartmentRead(BaseModel):
     landlord_id: int  # поле для связи с арендодателем
 
     # Используем аннотацию типа для списка PhotoRead
-    photos: List[PhotoRead] = []
-    
-    @field_validator('location', mode='before')
+    photos: list[PhotoRead] = []
+
+    @field_validator("location", mode="before")
     @classmethod
     def handle_dal_types(cls, v: Any) -> Any:
         # 1. Handle WKBElement (coming FROM the database/SQLAlchemy)
@@ -61,24 +60,22 @@ class ApartmentRead(BaseModel):
             # Use wkb.loads to convert binary to Shapely Point
             # We use v.data to get the raw binary hex
             return wkb.loads(bytes(v.data))
-        
+
         # 2. Handle WKT String (for safety/tests)
         if isinstance(v, str) and v.startswith("POINT"):
             return wkt.loads(v)
         return v
 
- 
-
     # @field_validator('location', mode='before')
     # @classmethod
     # def parse_location(cls, v: Any) -> Any:
-        
+
     #     # If the input is a string (like from your fixture), convert it to a Point
     #     if isinstance(v, str) and v.startswith("POINT"):
     #         print('4444444444444444444444444444444444444444444444444444444444444444444444444')
     #         return wkt.loads(v)
     #     return v
-    
+
     # @field_validator('location', mode='before')
     # @classmethod
     # def handle_dal_types(cls, v: Any) -> Any:
@@ -87,12 +84,12 @@ class ApartmentRead(BaseModel):
     #         # Use wkb.loads to convert binary to Shapely Point
     #         # We use v.data to get the raw binary hex
     #         return wkb.loads(bytes(v.data))
-        
+
     #     # 2. Handle WKT String (for safety/tests)
     #     if isinstance(v, str) and v.startswith("POINT"):
     #         print('4444444444444444444444444444444444444444444444444444444444444444444444443')
     #         return wkt.loads(v)
-            
+
     #     return v
 
     # class Config:
@@ -100,5 +97,5 @@ class ApartmentRead(BaseModel):
     #     arbitrary_types_allowed = True
 
 
-  # model_config = ConfigDict(arbitrary_types_allowed=True)
-    # location: Geography
+# model_config = ConfigDict(arbitrary_types_allowed=True)
+# location: Geography
