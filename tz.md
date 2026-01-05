@@ -151,12 +151,12 @@
 
 todo:
 + in aparment key to landlord.  OTM - FK to Landlord.
-- Balance (new model or field in Booking. greater - with Booking.cost)
++ Balance (new model or field in Booking. greater - with Booking.cost)
 - Coins (new model. Our currency. Depends on Booking&RaitingLandlord or Booking&RaitingClient)
-- RaitingLandlord (new model. OTM - FK to Landlord. OTM - FK to Client. Greater with new Bookings)
-- Review (new model. OTM - FK to Landlord & OTM - FK to Client).
++ RaitingLandlord (new model. OTM - FK to Landlord. OTM - FK to Client. Greater with new Bookings)
++ Review (new model. OTM - FK to Landlord & OTM - FK to Client).
 - make telegram channel Posutochka (functionality not assumed yet)
-- tests (uncomment and refactor)
++ tests (uncomment and refactor)
 - map (implement - Apartment.location(s) on it)
 - Authorization. Hash passwrd.
 
