@@ -8,6 +8,7 @@ from app.models.base import Base
 if TYPE_CHECKING:
     from app.models.booking import Booking
     from app.models.user import User
+    from app.models.review import Review
 
 
 class Client(Base):
@@ -23,6 +24,7 @@ class Client(Base):
     # Relationships
     user: Mapped["User"] = relationship(back_populates="client")
     bookings: Mapped[list["Booking"]] = relationship(back_populates="client")
+    reviews: Mapped[list["Review"]] = relationship(back_populates="client")
 
     def __repr__(self) -> str:
         return f"Client(id={self.id}, name='{self.first_name} {self.last_name}')"
