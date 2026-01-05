@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, Numeric
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -26,7 +26,6 @@ class Payment(Base):
     booking_id: Mapped[int] = mapped_column(ForeignKey("booking.id"), nullable=False)
     # Relationships
     booking: Mapped["Booking"] = relationship(back_populates="payments")
-    
 
     def __repr__(self) -> str:
         return (

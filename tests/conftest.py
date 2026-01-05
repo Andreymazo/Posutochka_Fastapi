@@ -12,8 +12,18 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.database import get_db
-from app.models import Apartment, Base, Client, Landlord, User
-from app.routers import apartments, bookings, clients, landlords, payments, photos, users
+from app.models import Apartment, Base, Booking, Client, Landlord, User
+from app.routers import (
+    apartments,
+    balances,
+    bookings,
+    clients,
+    landlords,
+    payments,
+    photos,
+    reviews,
+    users,
+)
 
 # Use PostgreSQL from environment variable, fallback to SQLite for local testing
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///:memory:")
@@ -54,6 +64,8 @@ def create_test_app() -> FastAPI:
     test_app.include_router(photos.router)
     test_app.include_router(bookings.router)
     test_app.include_router(payments.router)
+    test_app.include_router(balances.router)
+    test_app.include_router(reviews.router)
 
     @test_app.get("/")
     def root():
@@ -277,3 +289,46 @@ def created_client(
     db_session.commit()
     db_session.refresh(client_obj)
     return client_obj
+
+
+@pytest.fixture
+def created_booking(
+    db_session: Session,
+    created_landlord: Landlord,
+    created_client: Client,
+    created_apartment: Apartment,
+    sample_booking_data: dict[str, Any],
+) -> Booking:
+    """Create and return a booking in the database."""
+    from datetime import datetime
+
+    booking = Booking(
+        start_date=datetime.fromisoformat(sample_booking_data["start_date"]),
+        end_date=datetime.fromisoformat(sample_booking_data["end_date"]),
+        cost=sample_booking_data["cost"],
+        booking_status=sample_booking_data["booking_status"],
+        landlord_id=created_landlord.id,
+        client_id=created_client.id,
+        apartment_id=created_apartment.id,
+    )
+    db_session.add(booking)
+    db_session.commit()
+    db_session.refresh(booking)
+    return booking
+
+
+@pytest.fixture
+def sample_balance_data() -> dict[str, Any]:
+    """Sample balance data for testing."""
+    return {
+        "amount": 250.0,
+    }
+
+
+@pytest.fixture
+def sample_review_data() -> dict[str, Any]:
+    """Sample review data for testing."""
+    return {
+        "rating": 5,
+        "review": "Great apartment, highly recommend!",
+    }

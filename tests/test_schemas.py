@@ -7,11 +7,13 @@ from pydantic import ValidationError
 from shapely.geometry import Point
 
 from app.schemas.apartment import ApartmentCreate, ApartmentUpdate
+from app.schemas.balance import BalanceCreate, BalanceUpdate
 from app.schemas.booking import BookingCreate, BookingStatus, BookingUpdate
 from app.schemas.client import ClientCreate, ClientUpdate
 from app.schemas.landlord import LandlordCreate, LandlordUpdate
 from app.schemas.payment import PaymentCreate, PaymentStatus, PaymentUpdate
 from app.schemas.photo import PhotoCreate
+from app.schemas.review import ReviewCreate, ReviewUpdate
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 
 # Mock location for testing
@@ -262,3 +264,110 @@ class TestPhotoSchemas:
                 apartment_id=1,
             )
         assert "url" in str(exc_info.value).lower()
+
+
+class TestBalanceSchemas:
+    """Tests for Balance schema validation."""
+
+    def test_balance_create_valid(self) -> None:
+        """Test creating a valid balance."""
+        balance = BalanceCreate(
+            amount=250.0,
+            booking_id=1,
+        )
+        assert balance.amount == 250.0
+        assert balance.booking_id == 1
+
+    def test_balance_create_negative_amount(self) -> None:
+        """Test that negative amount raises validation error."""
+        with pytest.raises(ValidationError) as exc_info:
+            BalanceCreate(
+                amount=-100.0,
+                booking_id=1,
+            )
+        assert "amount" in str(exc_info.value).lower()
+
+    def test_balance_create_zero_amount(self) -> None:
+        """Test that zero amount raises validation error."""
+        with pytest.raises(ValidationError) as exc_info:
+            BalanceCreate(
+                amount=0,
+                booking_id=1,
+            )
+        assert "amount" in str(exc_info.value).lower()
+
+    def test_balance_update_partial(self) -> None:
+        """Test partial balance update."""
+        update = BalanceUpdate(amount=500.0)
+        assert update.amount == 500.0
+
+
+class TestReviewSchemas:
+    """Tests for Review schema validation."""
+
+    def test_review_create_valid(self) -> None:
+        """Test creating a valid review."""
+        review = ReviewCreate(
+            rating=5,
+            review="Excellent service!",
+            booking_id=1,
+            landlord_id=1,
+            client_id=1,
+        )
+        assert review.rating == 5
+        assert review.review == "Excellent service!"
+
+    def test_review_create_without_text(self) -> None:
+        """Test creating a review without review text."""
+        review = ReviewCreate(
+            rating=4,
+            review=None,
+            booking_id=1,
+            landlord_id=1,
+            client_id=1,
+        )
+        assert review.rating == 4
+        assert review.review is None
+
+    def test_review_create_rating_too_low(self) -> None:
+        """Test that rating below 1 raises validation error."""
+        with pytest.raises(ValidationError) as exc_info:
+            ReviewCreate(
+                rating=0,
+                review="Bad",
+                booking_id=1,
+                landlord_id=1,
+                client_id=1,
+            )
+        assert "rating" in str(exc_info.value).lower()
+
+    def test_review_create_rating_too_high(self) -> None:
+        """Test that rating above 5 raises validation error."""
+        with pytest.raises(ValidationError) as exc_info:
+            ReviewCreate(
+                rating=6,
+                review="Too good",
+                booking_id=1,
+                landlord_id=1,
+                client_id=1,
+            )
+        assert "rating" in str(exc_info.value).lower()
+
+    def test_review_create_text_too_long(self) -> None:
+        """Test that review text exceeding max length raises error."""
+        long_text = "a" * 701
+        with pytest.raises(ValidationError) as exc_info:
+            ReviewCreate(
+                rating=5,
+                review=long_text,
+                booking_id=1,
+                landlord_id=1,
+                client_id=1,
+            )
+        assert "review" in str(exc_info.value).lower()
+
+    def test_review_update_partial(self) -> None:
+        """Test partial review update."""
+        update = ReviewUpdate(rating=4)
+        assert update.rating == 4
+        assert update.review is None
