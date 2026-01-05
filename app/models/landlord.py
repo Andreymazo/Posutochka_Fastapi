@@ -8,6 +8,7 @@ from app.models.base import Base
 if TYPE_CHECKING:
     from app.models.booking import Booking
     from app.models.user import User
+    from app.models.apartment import Apartment
 
 
 class Landlord(Base):
@@ -22,7 +23,8 @@ class Landlord(Base):
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="landlord")
-    bookings: Mapped[list["Booking"]] = relationship(back_populates="landlord")
-
+    bookings: Mapped[list["Booking"]] = relationship(back_populates="landlord", uselist=True)
+    apartments: Mapped[list["Apartment"]] = relationship(back_populates="landlord", uselist=True)
+   
     def __repr__(self) -> str:
         return f"Landlord(id={self.id}, name='{self.first_name} {self.last_name}')"

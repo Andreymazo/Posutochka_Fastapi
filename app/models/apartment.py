@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from geoalchemy2.types import Geography
-from sqlalchemy import Float, Integer, String
+from sqlalchemy import Float, Integer, String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -9,7 +9,7 @@ from app.models.base import Base
 if TYPE_CHECKING:
     from app.models.booking import Booking
     from app.models.photo import Photo
-
+    from app.models.landlord import Landlord
 
 class Apartment(Base):
     """Apartment model - represents a rental property."""
@@ -26,9 +26,13 @@ class Apartment(Base):
 
     # Relationships
     photos: Mapped[list["Photo"]] = relationship(
-        back_populates="apartment", cascade="all, delete-orphan", uselist=True
-    )
+        back_populates="apartment", cascade="all, delete-orphan", uselist=True)
     bookings: Mapped[list["Booking"]] = relationship(back_populates="apartment", uselist=True)
+    landlord: Mapped["Landlord"] = relationship(back_populates="apartments")
+
+    # Foreign Keys
+    landlord_id: Mapped[int] = mapped_column(ForeignKey("landlord.id"), nullable=False)
+    
 
     def __repr__(self) -> str:
         return (
