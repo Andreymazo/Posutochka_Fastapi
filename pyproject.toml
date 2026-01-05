@@ -50,6 +50,7 @@ ignore = [
     "C901",   # too complex
     "W191",   # indentation contains tabs
     "RET504", # unnecessary variable assignment before return
+    "RUF003", # Allow ambiguous unicode characters (Russian comments)
 ]
 
 [tool.ruff.lint.per-file-ignores]
