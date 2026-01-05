@@ -104,12 +104,34 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
 
 @pytest.fixture
 def sample_user_data() -> dict[str, Any]:
-    """Sample user data for testing."""
+    """Sample user data for testing (deprecated - use sample_user_landlord_data or sample_user_client_data)."""
     return {
         "email": "test@example.com",
         "phone_number": "+1234567890",
         "password_hash": "securepassword123",
         "telegram_username": "@testuser",
+    }
+
+
+@pytest.fixture
+def sample_user_landlord_data() -> dict[str, Any]:
+    """Sample user data for landlord testing."""
+    return {
+        "email": "landlord@example.com",
+        "phone_number": "+1234567890",
+        "password_hash": "landlordpassword123",
+        "telegram_username": "@landlorduser",
+    }
+
+
+@pytest.fixture
+def sample_user_client_data() -> dict[str, Any]:
+    """Sample user data for client testing."""
+    return {
+        "email": "client@example.com",
+        "phone_number": "+0987654321",
+        "password_hash": "clientpassword123",
+        "telegram_username": "@clientuser",
     }
 
 
@@ -177,13 +199,13 @@ def sample_photo_data() -> dict[str, Any]:
 
 
 @pytest.fixture
-def created_user(db_session: Session, sample_user_data: dict[str, Any]) -> User:
-    """Create and return a user in the database."""
+def created_user(db_session: Session, sample_user_landlord_data: dict[str, Any]) -> User:
+    """Create and return a user in the database (for landlord use)."""
     user = User(
-        email=sample_user_data["email"],
-        phone_number=sample_user_data["phone_number"],
-        password_hash=sample_user_data["password_hash"],
-        telegram_username=sample_user_data["telegram_username"],
+        email=sample_user_landlord_data["email"],
+        phone_number=sample_user_landlord_data["phone_number"],
+        password_hash=sample_user_landlord_data["password_hash"],
+        telegram_username=sample_user_landlord_data["telegram_username"],
     )
     db_session.add(user)
     db_session.commit()
@@ -227,12 +249,13 @@ def created_landlord(
 
 
 @pytest.fixture
-def created_client_user(db_session: Session) -> User:
+def created_client_user(db_session: Session, sample_user_client_data: dict[str, Any]) -> User:
     """Create and return a client user in the database."""
     user = User(
-        email="client@example.com",
-        phone_number="+0987654321",
-        password_hash="clientpassword123",
+        email=sample_user_client_data["email"],
+        phone_number=sample_user_client_data["phone_number"],
+        password_hash=sample_user_client_data["password_hash"],
+        telegram_username=sample_user_client_data.get("telegram_username"),
     )
     db_session.add(user)
     db_session.commit()
