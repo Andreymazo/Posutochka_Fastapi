@@ -31,13 +31,13 @@ class Booking(Base):
 
     # Foreign keys
     landlord_id: Mapped[int] = mapped_column(
-        ForeignKey("landlord.id"), ondelete="CASCADE", nullable=False
+        ForeignKey("landlord.id", ondelete="CASCADE"), nullable=False
     )
     client_id: Mapped[int] = mapped_column(
-        ForeignKey("client.id"), ondelete="CASCADE", nullable=False
+        ForeignKey("client.id", ondelete="CASCADE"), nullable=False
     )
     apartment_id: Mapped[int] = mapped_column(
-        ForeignKey("apartment.id"), ondelete="CASCADE", nullable=False
+        ForeignKey("apartment.id", ondelete="CASCADE"), nullable=False
     )
 
     # Relationships (у брони ОДИН владелец, ОДИН клиент, ОДНА квартира).
