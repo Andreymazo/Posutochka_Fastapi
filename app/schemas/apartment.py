@@ -30,7 +30,7 @@ class ApartmentUpdate(BaseModel):
 
     # model_config = ConfigDict(arbitrary_types_allowed=True)
     # location: Geography
-    location: Annotated[Point, GeometryField()]
+    location: Annotated[Point, GeometryField()] | None = None
     name: str | None = Field(None, max_length=255)
     description: str | None = None
     price_per_night: float | None = Field(None, gt=0)
