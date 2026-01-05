@@ -150,7 +150,7 @@
 
 
 todo:
-- in aparment key to landlord.  OTM - FK to Landlord.
++ in aparment key to landlord.  OTM - FK to Landlord.
 - Balance (new model or field in Booking. greater - with Booking.cost)
 - Coins (new model. Our currency. Depends on Booking&RaitingLandlord or Booking&RaitingClient)
 - RaitingLandlord (new model. OTM - FK to Landlord. OTM - FK to Client. Greater with new Bookings)
