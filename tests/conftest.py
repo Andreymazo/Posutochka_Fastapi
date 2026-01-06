@@ -19,9 +19,11 @@ from app.routers import (
     bookings,
     clients,
     landlords,
+    owners,
     payments,
     photos,
     reviews,
+    transactions,
     users,
 )
 
@@ -66,6 +68,8 @@ def create_test_app() -> FastAPI:
     test_app.include_router(payments.router)
     test_app.include_router(balances.router)
     test_app.include_router(reviews.router)
+    test_app.include_router(owners.router)
+    test_app.include_router(transactions.router)
 
     @test_app.get("/")
     def root():
@@ -331,4 +335,21 @@ def sample_review_data() -> dict[str, Any]:
     return {
         "rating": 5,
         "review": "Great apartment, highly recommend!",
+    }
+
+
+@pytest.fixture
+def sample_owner_data() -> dict[str, Any]:
+    """Sample owner data for testing."""
+    return {
+        "amount": 100.0,
+    }
+
+
+@pytest.fixture
+def sample_transaction_data() -> dict[str, Any]:
+    """Sample transaction data for testing."""
+    return {
+        "amount": 250.0,
+        "transaction_type": "booking_payment",
     }

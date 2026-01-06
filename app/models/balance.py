@@ -8,10 +8,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 
 if TYPE_CHECKING:
-    from app.models.booking import Booking
     from app.models.user import User
 
-'''Итоговый счет. Сколько денег сейчас.'''
+"""Итоговый счет. Сколько денег сейчас."""
+
+
 class Balance(Base):
     """Balance model - represents earnings from bookings."""
 
@@ -24,11 +25,14 @@ class Balance(Base):
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
     # Сумма транзакции.
     # precision=12 позволяет хранить миллиарды, scale=2 — копейки
-    amount: Mapped[Decimal] = mapped_column(Numeric(precision=12, scale=2), server_default="0.00", 
-        nullable=False)
-  
+    amount: Mapped[Decimal] = mapped_column(
+        Numeric(precision=12, scale=2), server_default="0.00", nullable=False
+    )
+
     # Foreign keys
-    booking_id: Mapped[int] = mapped_column(ForeignKey("booking.id", ondelete="CASCADE"), nullable=False)    
+    booking_id: Mapped[int] = mapped_column(
+        ForeignKey("booking.id", ondelete="CASCADE"), nullable=False
+    )
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), unique=True, nullable=False)
 
     # Relationships One-to-One модели User поле называется 'balance'

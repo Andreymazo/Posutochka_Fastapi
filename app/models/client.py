@@ -19,7 +19,7 @@ class Client(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    
+
     # Foreign keys
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), unique=True, nullable=False)
     # Relationships

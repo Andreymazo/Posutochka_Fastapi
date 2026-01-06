@@ -5,9 +5,11 @@ from app.models.base import Base
 from app.models.booking import Booking
 from app.models.client import Client
 from app.models.landlord import Landlord
+from app.models.owner import Owner
 from app.models.payment import Payment
 from app.models.photo import Photo
 from app.models.review import Review
+from app.models.transaction import Transaction
 from app.models.user import User
 
 __all__ = [
@@ -17,8 +19,10 @@ __all__ = [
     "Booking",
     "Client",
     "Landlord",
+    "Owner",
     "Payment",
     "Photo",
     "Review",
+    "Transaction",
     "User",
 ]
