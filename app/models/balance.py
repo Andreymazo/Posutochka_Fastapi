@@ -8,9 +8,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 
 if TYPE_CHECKING:
-    from app.models.user import User
-    from app.models.booking import Booking
     from app.models.transaction import Transaction
+    from app.models.user import User
 
 """Итоговый счет. Сколько денег сейчас."""
 class Balance(Base):

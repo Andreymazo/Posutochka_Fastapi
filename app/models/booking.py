@@ -9,7 +9,6 @@ from app.models.base import Base
 
 if TYPE_CHECKING:
     from app.models.apartment import Apartment
-    from app.models.balance import Balance
     from app.models.client import Client
     from app.models.landlord import Landlord
     from app.models.payment import Payment
@@ -54,7 +53,7 @@ class Booking(Base):
     # В моделях Payment и Balance поле должно называться back_populates="booking"
     # One-to-Many: Одна бронь — много платежей (фактов оплаты)
     payments: Mapped[list["Payment"]] = relationship(back_populates="booking")
-        
+
     # One-to-Many: Одна бронь — много транзакций
     # имя атрибута 'transactions' должно совпадать с back_populates в Transaction
     transactions: Mapped[list["Transaction"]] = relationship(back_populates="booking")

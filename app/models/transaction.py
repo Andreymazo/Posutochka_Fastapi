@@ -19,9 +19,9 @@ class TransactionType(str, enum.Enum):
 
 
 if TYPE_CHECKING:
+    from app.models.balance import Balance
     from app.models.booking import Booking
     from app.models.user import User
-    from app.models.balance import Balance
 
 """История платежей"""
 class Transaction(Base):

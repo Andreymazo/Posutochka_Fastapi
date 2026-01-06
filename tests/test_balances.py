@@ -31,14 +31,14 @@ class TestBalanceEndpoints:
         client: TestClient,
         # created_booking больше не нужен для создания баланса
         sample_balance_data: dict[str, Any],
-        created_user, 
-    
+        created_user,
+
     ) -> None:
         """Test creating a new balance."""
         data = {**sample_balance_data, "user_id": created_user.id}
-        
+
         response = client.post("/balances/", json=data)
-        
+
         assert response.status_code == 201
         assert response.json()["amount"] == sample_balance_data["amount"]
         # Проверку booking_id тоже удаляем, так как этого поля нет в модели
