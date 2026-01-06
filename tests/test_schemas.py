@@ -273,17 +273,17 @@ class TestBalanceSchemas:
         """Test creating a valid balance."""
         balance = BalanceCreate(
             amount=250.0,
-            booking_id=1,
+            user_id=1,  # Теперь это обязательное поле вместо booking_i
         )
         assert balance.amount == 250.0
-        assert balance.booking_id == 1
+        assert balance.user_id == 1
 
     def test_balance_create_negative_amount(self) -> None:
         """Test that negative amount raises validation error."""
         with pytest.raises(ValidationError) as exc_info:
             BalanceCreate(
                 amount=-100.0,
-                booking_id=1,
+                user_id=1,
             )
         assert "amount" in str(exc_info.value).lower()
 
@@ -292,7 +292,7 @@ class TestBalanceSchemas:
         with pytest.raises(ValidationError) as exc_info:
             BalanceCreate(
                 amount=0,
-                booking_id=1,
+                user_id=1,
             )
         assert "amount" in str(exc_info.value).lower()
 

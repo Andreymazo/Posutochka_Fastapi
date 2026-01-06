@@ -1,5 +1,5 @@
 """Shared test fixtures and configuration."""
-
+from sqlalchemy.ext.asyncio import AsyncSession
 import os
 from collections.abc import Generator
 from contextlib import asynccontextmanager
@@ -320,6 +320,15 @@ def created_booking(
     db_session.refresh(booking)
     return booking
 
+@pytest.fixture
+async def created_user(db_session: AsyncSession, sample_user_data: dict[str, Any]) -> User:
+    """Создает реального пользователя из сырых данных."""
+    
+    user = User(**sample_user_data)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
 
 @pytest.fixture
 def sample_balance_data() -> dict[str, Any]:

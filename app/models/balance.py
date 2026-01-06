@@ -9,10 +9,10 @@ from app.models.base import Base
 
 if TYPE_CHECKING:
     from app.models.user import User
+    from app.models.booking import Booking
+    from app.models.transaction import Transaction
 
 """Итоговый счет. Сколько денег сейчас."""
-
-
 class Balance(Base):
     """Balance model - represents earnings from bookings."""
 
@@ -30,13 +30,12 @@ class Balance(Base):
     )
 
     # Foreign keys
-    booking_id: Mapped[int] = mapped_column(
-        ForeignKey("booking.id", ondelete="CASCADE"), nullable=False
-    )
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), unique=True, nullable=False)
 
     # Relationships One-to-One модели User поле называется 'balance'
     user: Mapped["User"] = relationship(back_populates="balance")
+    # One-to-Many
+    transactions: Mapped[list["Transaction"]] = relationship(back_populates="balance")
 
     def __repr__(self) -> str:
         return f"Balance(id={self.id}, user_id={self.user_id}, amount={self.amount})"

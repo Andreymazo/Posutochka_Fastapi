@@ -21,11 +21,9 @@ class TransactionType(str, enum.Enum):
 if TYPE_CHECKING:
     from app.models.booking import Booking
     from app.models.user import User
-
+    from app.models.balance import Balance
 
 """История платежей"""
-
-
 class Transaction(Base):
     """История начислений: за какую бронь сколько упало"""
 
@@ -43,8 +41,11 @@ class Transaction(Base):
     # Foren keys OTM
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=False)
     booking_id: Mapped[int] = mapped_column(
-        ForeignKey("booking.id", ondelete="CASCADE"), nullable=False
-    )
+        ForeignKey("booking.id", ondelete="CASCADE"), nullable=False)
+    balance_id: Mapped[int] = mapped_column(
+        ForeignKey("balance.id", ondelete="CASCADE"), nullable=False)
 
-    booking: Mapped["Booking"] = relationship(back_populates="balance_records")
+    # Relationships
+    booking: Mapped["Booking"] = relationship(back_populates="transactions")
     user: Mapped["User"] = relationship(back_populates="wallet_history")
+    balance: Mapped["Balance"] = relationship(back_populates="transactions")

@@ -11,21 +11,38 @@ from app.models import Balance, Booking
 class TestBalanceEndpoints:
     """Tests for balance CRUD operations."""
 
+    # def test_create_balance(
+    #     self,
+    #     client: TestClient,
+    #     created_booking: Booking,
+    #     sample_balance_data: dict[str, Any],
+    # ) -> None:
+    #     """Test creating a new balance."""
+    #     data = {
+    #         **sample_balance_data,
+    #         "booking_id": created_booking.id,
+    #     }
+    #     response = client.post("/balances/", json=data)
+    #     assert response.status_code == 201
+    #     assert response.json()["amount"] == sample_balance_data["amount"]
+    #     assert response.json()["booking_id"] == created_booking.id
     def test_create_balance(
         self,
         client: TestClient,
-        created_booking: Booking,
+        # created_booking больше не нужен для создания баланса
         sample_balance_data: dict[str, Any],
+        created_user, 
+    
     ) -> None:
         """Test creating a new balance."""
-        data = {
-            **sample_balance_data,
-            "booking_id": created_booking.id,
-        }
+        data = {**sample_balance_data, "user_id": created_user.id}
+        
         response = client.post("/balances/", json=data)
+        
         assert response.status_code == 201
         assert response.json()["amount"] == sample_balance_data["amount"]
-        assert response.json()["booking_id"] == created_booking.id
+        # Проверку booking_id тоже удаляем, так как этого поля нет в модели
+        assert "id" in response.json()
 
     def test_get_balances(
         self,

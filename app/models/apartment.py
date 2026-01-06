@@ -1,5 +1,5 @@
 from typing import TYPE_CHECKING
-
+from decimal import Decimal
 from geoalchemy2.types import Geography
 from sqlalchemy import ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -21,7 +21,7 @@ class Apartment(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     # Рекомендуется Numeric для точности цен
-    price_per_night: Mapped[float] = mapped_column(Numeric(precision=10, scale=2), nullable=False)
+    price_per_night: Mapped[Decimal] = mapped_column(Numeric(precision=10, scale=2), nullable=False)
 
     address: Mapped[str] = mapped_column(String(255), nullable=False)
     # Note: GeoAlchemy2 Geography type can be added when PostGIS is available

@@ -3,6 +3,7 @@
 from typing import Any
 
 from fastapi.testclient import TestClient
+import pytest
 
 
 class TestApartmentEndpoints:
@@ -24,8 +25,9 @@ class TestApartmentEndpoints:
         assert data["address"] == sample_apartment_data["address"]
         assert data["location"] == sample_apartment_data["location"]
         assert "id" in data
-
-    def test_create_apartment_without_description(
+        
+    @pytest.mark.asyncio  # ДОБАВИТЬ ЭТО
+    async def test_create_apartment_without_description( # ДОБАВИТЬ async
         self, client: TestClient, created_landlord
     ) -> None:
         """Test creating apartment without optional description."""

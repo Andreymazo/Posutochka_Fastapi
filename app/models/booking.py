@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric
@@ -13,6 +14,7 @@ if TYPE_CHECKING:
     from app.models.landlord import Landlord
     from app.models.payment import Payment
     from app.models.review import Review
+    from app.models.transaction import Transaction
 
 
 class Booking(Base):
@@ -23,7 +25,7 @@ class Booking(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     start_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     end_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    cost: Mapped[float] = mapped_column(Numeric(precision=10, scale=2), nullable=False)
+    cost: Mapped[Decimal] = mapped_column(Numeric(precision=10, scale=2), nullable=False)
     booking_status: Mapped[str] = mapped_column(
         Enum("pending", "confirmed", "cancelled", name="booking_status", create_type=False),
         nullable=False,
@@ -50,8 +52,12 @@ class Booking(Base):
 
     # One-to-Many: Одна бронь — список платежей и балансовых транзакций
     # В моделях Payment и Balance поле должно называться back_populates="booking"
+    # One-to-Many: Одна бронь — много платежей (фактов оплаты)
     payments: Mapped[list["Payment"]] = relationship(back_populates="booking")
-    balances: Mapped[list["Balance"]] = relationship(back_populates="booking")
+        
+    # One-to-Many: Одна бронь — много транзакций
+    # имя атрибута 'transactions' должно совпадать с back_populates в Transaction
+    transactions: Mapped[list["Transaction"]] = relationship(back_populates="booking")
 
     def __repr__(self) -> str:
         return (

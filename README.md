@@ -218,3 +218,43 @@ create_apartment_and_photos(db)
       # ### end Alembic commands ###
 
 ______________
+
+Вариант 1: Оставить и Transaction, и Payment (Рекомендуется)
+Если Payment используется для фиксации факта оплаты (входящий платеж), а Transaction — это внутренняя запись в балансе (начисление/списание), то они обе нужны.
+Вам нужно просто вернуть строку в модель Booking:
+python
+
+class Booking(Base):
+    """Booking model - represents a reservation."""
+    # ... (все остальные поля и импорты) ...
+
+    # One-to-Many: Одна бронь — много транзакций
+    # имя атрибута 'transactions' должно совпадать с back_populates в Transaction
+    transactions: Mapped[list["Transaction"]] = relationship(back_populates="booking")
+
+    # ДОБАВЬТЕ ЭТУ СТРОКУ НАЗАД:
+    # One-to-Many: Одна бронь — много платежей (фактов оплаты)
+    payments: Mapped[list["Payment"]] = relationship(back_populates="booking")
+
+    def __repr__(self) -> str:
+        return (
+            f"Booking(id={self.id}, apartment_id={self.apartment_id}, "
+            f"status='{self.booking_status}')"
+        )
+
+Используйте код с осторожностью.
+И убедитесь, что в модели Payment есть зеркальная связь:
+python
+
+class Payment(Base):
+    # ... (ваши поля в Payment) ...
+    booking_id: Mapped[int] = mapped_column(ForeignKey("booking.id"))
+    
+    # ЭТО ОБЯЗАТЕЛЬНО:
+    booking: Mapped["Booking"] = relationship(back_populates="payments")
+
+Используйте код с осторожностью.
+Вариант 2: Использовать только Transaction и удалить Payment
+Если вы хотите использовать только Transaction и полностью отказаться от Payment как от отдельной модели, вам нужно найти и удалить файл или класс Payment в вашем проекте, который все еще пытается инициализироваться.
+Резюме:
+Ошибка исчезнет, как только все back_populates найдут свои парные атрибуты. Вариант 1 — это быстрый и логичный способ исправить проблему, если модель Payment существует.

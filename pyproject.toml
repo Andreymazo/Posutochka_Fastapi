@@ -71,6 +71,8 @@ ignore = [
     "PT019",   # allow lifespan function parameter pattern
 ]
 
+
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
@@ -97,6 +99,13 @@ disallow_untyped_defs = false
 minversion = "7.0"
 addopts = "-ra -q --strict-markers"
 testpaths = ["tests"]
+
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+# Добавьте это, чтобы игнорировать предупреждения, пока вы не переделали все тесты
+filterwarnings = [
+    "ignore::pytest.PytestRemovedIn9Warning"
+]
 
 [tool.coverage.run]
 source = ["app"]

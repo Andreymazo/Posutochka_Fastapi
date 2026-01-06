@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from decimal import Decimal
 from pydantic import BaseModel, Field
 
 
@@ -12,8 +12,9 @@ class BalanceBase(BaseModel):
 class BalanceCreate(BalanceBase):
     """Schema for creating a new Balance."""
 
-    booking_id: int
-
+    # Field(gt=0) заставит Pydantic выбрасывать ValidationError при значении 0 или меньше
+    amount: Decimal = Field(gt=0, description="Сумма должна быть больше нуля")
+    user_id: int
 
 class BalanceUpdate(BaseModel):
     """Schema for updating a Balance - all fields optional."""
