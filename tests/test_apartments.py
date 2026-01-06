@@ -27,7 +27,7 @@ class TestApartmentEndpoints:
         assert "id" in data
 
     @pytest.mark.asyncio  # ДОБАВИТЬ ЭТО
-    async def test_create_apartment_without_description( # ДОБАВИТЬ async
+    async def test_create_apartment_without_description(  # ДОБАВИТЬ async
         self, client: TestClient, created_landlord
     ) -> None:
         """Test creating apartment without optional description."""

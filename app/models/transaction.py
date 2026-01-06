@@ -24,6 +24,8 @@ if TYPE_CHECKING:
     from app.models.user import User
 
 """История платежей"""
+
+
 class Transaction(Base):
     """История начислений: за какую бронь сколько упало"""
 
@@ -41,9 +43,11 @@ class Transaction(Base):
     # Foren keys OTM
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=False)
     booking_id: Mapped[int] = mapped_column(
-        ForeignKey("booking.id", ondelete="CASCADE"), nullable=False)
+        ForeignKey("booking.id", ondelete="CASCADE"), nullable=False
+    )
     balance_id: Mapped[int] = mapped_column(
-        ForeignKey("balance.id", ondelete="CASCADE"), nullable=False)
+        ForeignKey("balance.id", ondelete="CASCADE"), nullable=False
+    )
 
     # Relationships
     booking: Mapped["Booking"] = relationship(back_populates="transactions")

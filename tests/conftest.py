@@ -1,4 +1,5 @@
 """Shared test fixtures and configuration."""
+
 import os
 from collections.abc import Generator
 from contextlib import asynccontextmanager
