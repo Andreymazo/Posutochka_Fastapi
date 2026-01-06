@@ -10,12 +10,12 @@ router = APIRouter(prefix="/balances", tags=["balances"])
 
 @router.get("/", response_model=list[BalanceRead])
 def get_balances(
-    booking_id: int | None = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
+    user_id: int | None = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ) -> list[Balance]:
-    """Get all balances with optional booking filter and pagination."""
+    """Get all balances with optional user filter and pagination."""
     query = db.query(Balance)
-    if booking_id:
-        query = query.filter(Balance.booking_id == booking_id)
+    if user_id:
+        query = query.filter(Balance.user_id == user_id)
     balances = query.offset(skip).limit(limit).all()
     return balances
 
@@ -33,7 +33,7 @@ def get_balance(balance_id: int, db: Session = Depends(get_db)) -> Balance:
 def create_balance(balance_data: BalanceCreate, db: Session = Depends(get_db)) -> Balance:
     """Create a new balance."""
     balance = Balance(
-        booking_id=balance_data.booking_id,
+        user_id=balance_data.user_id,
         amount=balance_data.amount,
     )
     db.add(balance)

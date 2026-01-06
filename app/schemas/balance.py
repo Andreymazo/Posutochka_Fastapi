@@ -26,7 +26,7 @@ class BalanceRead(BalanceBase):
     """Schema for reading Balance data (response)."""
 
     id: int
-    booking_id: int
+    user_id: int
     created_at: datetime
     updated_at: datetime
 

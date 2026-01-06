@@ -5,7 +5,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models import Booking, Transaction, User
+from app.models import Balance, Booking, Transaction, User
 
 
 class TestTransactionEndpoints:
@@ -16,6 +16,7 @@ class TestTransactionEndpoints:
         client: TestClient,
         created_user: User,
         created_booking: Booking,
+        created_balance: Balance,
         sample_transaction_data: dict[str, Any],
     ) -> None:
         """Test creating a new transaction."""
@@ -23,6 +24,7 @@ class TestTransactionEndpoints:
             **sample_transaction_data,
             "user_id": created_user.id,
             "booking_id": created_booking.id,
+            "balance_id": created_balance.id,
         }
         response = client.post("/transactions/", json=data)
         assert response.status_code == 201
@@ -30,6 +32,7 @@ class TestTransactionEndpoints:
         assert response.json()["transaction_type"] == sample_transaction_data["transaction_type"]
         assert response.json()["user_id"] == created_user.id
         assert response.json()["booking_id"] == created_booking.id
+        assert response.json()["balance_id"] == created_balance.id
 
     def test_get_transactions(
         self,
@@ -37,6 +40,7 @@ class TestTransactionEndpoints:
         db_session: Session,
         created_user: User,
         created_booking: Booking,
+        created_balance: Balance,
         sample_transaction_data: dict[str, Any],
     ) -> None:
         """Test retrieving all transactions."""
@@ -45,6 +49,7 @@ class TestTransactionEndpoints:
             transaction_type=sample_transaction_data["transaction_type"],
             user_id=created_user.id,
             booking_id=created_booking.id,
+            balance_id=created_balance.id,
         )
         db_session.add(transaction)
         db_session.commit()
@@ -59,6 +64,7 @@ class TestTransactionEndpoints:
         db_session: Session,
         created_user: User,
         created_booking: Booking,
+        created_balance: Balance,
         sample_transaction_data: dict[str, Any],
     ) -> None:
         """Test retrieving a specific transaction by ID."""
@@ -67,6 +73,7 @@ class TestTransactionEndpoints:
             transaction_type=sample_transaction_data["transaction_type"],
             user_id=created_user.id,
             booking_id=created_booking.id,
+            balance_id=created_balance.id,
         )
         db_session.add(transaction)
         db_session.commit()
@@ -89,6 +96,7 @@ class TestTransactionEndpoints:
         db_session: Session,
         created_user: User,
         created_booking: Booking,
+        created_balance: Balance,
         sample_transaction_data: dict[str, Any],
     ) -> None:
         """Test updating a transaction."""
@@ -97,6 +105,7 @@ class TestTransactionEndpoints:
             transaction_type=sample_transaction_data["transaction_type"],
             user_id=created_user.id,
             booking_id=created_booking.id,
+            balance_id=created_balance.id,
         )
         db_session.add(transaction)
         db_session.commit()
@@ -114,6 +123,7 @@ class TestTransactionEndpoints:
         db_session: Session,
         created_user: User,
         created_booking: Booking,
+        created_balance: Balance,
         sample_transaction_data: dict[str, Any],
     ) -> None:
         """Test deleting a transaction."""
@@ -122,6 +132,7 @@ class TestTransactionEndpoints:
             transaction_type=sample_transaction_data["transaction_type"],
             user_id=created_user.id,
             booking_id=created_booking.id,
+            balance_id=created_balance.id,
         )
         db_session.add(transaction)
         db_session.commit()
@@ -140,6 +151,7 @@ class TestTransactionEndpoints:
         db_session: Session,
         created_user: User,
         created_booking: Booking,
+        created_balance: Balance,
         sample_transaction_data: dict[str, Any],
     ) -> None:
         """Test filtering transactions by user_id."""
@@ -148,6 +160,7 @@ class TestTransactionEndpoints:
             transaction_type=sample_transaction_data["transaction_type"],
             user_id=created_user.id,
             booking_id=created_booking.id,
+            balance_id=created_balance.id,
         )
         db_session.add(transaction)
         db_session.commit()
@@ -163,6 +176,7 @@ class TestTransactionEndpoints:
         db_session: Session,
         created_user: User,
         created_booking: Booking,
+        created_balance: Balance,
         sample_transaction_data: dict[str, Any],
     ) -> None:
         """Test filtering transactions by booking_id."""
@@ -171,6 +185,7 @@ class TestTransactionEndpoints:
             transaction_type=sample_transaction_data["transaction_type"],
             user_id=created_user.id,
             booking_id=created_booking.id,
+            balance_id=created_balance.id,
         )
         db_session.add(transaction)
         db_session.commit()
@@ -185,6 +200,7 @@ class TestTransactionEndpoints:
         client: TestClient,
         created_user: User,
         created_booking: Booking,
+        created_balance: Balance,
     ) -> None:
         """Test creating transactions with different types."""
         transaction_types = [
@@ -201,6 +217,7 @@ class TestTransactionEndpoints:
                 "transaction_type": trans_type,
                 "user_id": created_user.id,
                 "booking_id": created_booking.id,
+                "balance_id": created_balance.id,
             }
             response = client.post("/transactions/", json=data)
             assert response.status_code == 201

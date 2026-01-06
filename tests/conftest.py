@@ -362,3 +362,20 @@ def sample_transaction_data() -> dict[str, Any]:
         "amount": 250.0,
         "transaction_type": "booking_payment",
     }
+
+
+@pytest.fixture
+def created_balance(
+    db_session: Session, created_user: User, sample_balance_data: dict[str, Any]
+) -> "Balance":
+    """Create and return a balance in the database."""
+    from app.models.balance import Balance
+
+    balance = Balance(
+        user_id=created_user.id,
+        amount=sample_balance_data["amount"],
+    )
+    db_session.add(balance)
+    db_session.commit()
+    db_session.refresh(balance)
+    return balance

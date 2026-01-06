@@ -5,7 +5,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models import Balance, Booking
+from app.models import Balance, User
 
 
 class TestBalanceEndpoints:
@@ -48,13 +48,13 @@ class TestBalanceEndpoints:
         self,
         client: TestClient,
         db_session: Session,
-        created_booking: Booking,
+        created_user: User,
         sample_balance_data: dict[str, Any],
     ) -> None:
         """Test retrieving all balances."""
         balance = Balance(
             amount=sample_balance_data["amount"],
-            booking_id=created_booking.id,
+            user_id=created_user.id,
         )
         db_session.add(balance)
         db_session.commit()
@@ -67,13 +67,13 @@ class TestBalanceEndpoints:
         self,
         client: TestClient,
         db_session: Session,
-        created_booking: Booking,
+        created_user: User,
         sample_balance_data: dict[str, Any],
     ) -> None:
         """Test retrieving a specific balance by ID."""
         balance = Balance(
             amount=sample_balance_data["amount"],
-            booking_id=created_booking.id,
+            user_id=created_user.id,
         )
         db_session.add(balance)
         db_session.commit()
@@ -93,13 +93,13 @@ class TestBalanceEndpoints:
         self,
         client: TestClient,
         db_session: Session,
-        created_booking: Booking,
+        created_user: User,
         sample_balance_data: dict[str, Any],
     ) -> None:
         """Test updating a balance."""
         balance = Balance(
             amount=sample_balance_data["amount"],
-            booking_id=created_booking.id,
+            user_id=created_user.id,
         )
         db_session.add(balance)
         db_session.commit()
@@ -114,13 +114,13 @@ class TestBalanceEndpoints:
         self,
         client: TestClient,
         db_session: Session,
-        created_booking: Booking,
+        created_user: User,
         sample_balance_data: dict[str, Any],
     ) -> None:
         """Test deleting a balance."""
         balance = Balance(
             amount=sample_balance_data["amount"],
-            booking_id=created_booking.id,
+            user_id=created_user.id,
         )
         db_session.add(balance)
         db_session.commit()
@@ -133,22 +133,22 @@ class TestBalanceEndpoints:
         response = client.get(f"/balances/{balance.id}")
         assert response.status_code == 404
 
-    def test_filter_balances_by_booking(
+    def test_filter_balances_by_user(
         self,
         client: TestClient,
         db_session: Session,
-        created_booking: Booking,
+        created_user: User,
         sample_balance_data: dict[str, Any],
     ) -> None:
-        """Test filtering balances by booking_id."""
+        """Test filtering balances by user_id."""
         balance = Balance(
             amount=sample_balance_data["amount"],
-            booking_id=created_booking.id,
+            user_id=created_user.id,
         )
         db_session.add(balance)
         db_session.commit()
 
-        response = client.get(f"/balances/?booking_id={created_booking.id}")
+        response = client.get(f"/balances/?user_id={created_user.id}")
         assert response.status_code == 200
         assert len(response.json()) >= 1
-        assert all(b["booking_id"] == created_booking.id for b in response.json())
+        assert all(b["user_id"] == created_user.id for b in response.json())
