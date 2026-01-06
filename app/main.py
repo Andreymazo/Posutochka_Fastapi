@@ -10,9 +10,11 @@ from app.routers import (
     bookings,
     clients,
     landlords,
+    owners,
     payments,
     photos,
     reviews,
+    transactions,
     users,
 )
 
@@ -42,6 +44,8 @@ app.include_router(bookings.router)
 app.include_router(payments.router)
 app.include_router(balances.router)
 app.include_router(reviews.router)
+app.include_router(owners.router)
+app.include_router(transactions.router)
 
 
 @app.get("/")

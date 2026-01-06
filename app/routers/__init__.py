@@ -5,9 +5,11 @@ from app.routers import (
     bookings,
     clients,
     landlords,
+    owners,
     payments,
     photos,
     reviews,
+    transactions,
     users,
 )
 
@@ -17,8 +19,10 @@ __all__ = [
     "bookings",
     "clients",
     "landlords",
+    "owners",
     "payments",
     "photos",
     "reviews",
+    "transactions",
     "users",
 ]

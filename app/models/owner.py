@@ -9,7 +9,7 @@ from app.models.base import Base
 
 if TYPE_CHECKING:
     from app.models.user import User
-    from app.models.balance import Balance
+
 
 class Owner(Base):
     """Balance model - represents earnings from bookings."""
@@ -30,6 +30,7 @@ class Owner(Base):
         ForeignKey("booking.id", ondelete="CASCADE"), nullable=False
     )
     user_id: Mapped[int] = mapped_column(
-        ForeignKey("user.id", ondelete="CASCADE"), unique=True, nullable=False)
+        ForeignKey("user.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
     # Relationships
     user: Mapped["User"] = relationship(back_populates="owner")
