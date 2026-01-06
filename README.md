@@ -133,9 +133,8 @@ MIT
 
 pip install sqlalchemy-postgresql
 
-### Установка PostGIS:
+Please download all logs and data related about the issue to this repository, make sure we compile that data to `./docs/case-studies/issue-{id}` folder, and use it to do deep case study analysis (also make sure to search online for additional facts and data), in which we will reconstruct timeline/sequence of events, find root causes of the problem, and propose possible solutions.
 
-Убедитесь, что у вас установлен PostGIS на вашей базе данных. Если вы используете Docker или контейнеры, проверьте конфигурацию вашего образа PostgreSQL.
 
 ```bash
 # Пример команды для установки расширения PostGIS в Docker

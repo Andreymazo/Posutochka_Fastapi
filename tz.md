@@ -159,5 +159,7 @@ todo:
 + tests (uncomment and refactor)
 - map (implement - Apartment.location(s) on it)
 - Authorization. Hash passwrd.
-
+- Owner model. OTO fm Landlord, Client, Owner to Balance.
+- Chat
+- Notification
 
