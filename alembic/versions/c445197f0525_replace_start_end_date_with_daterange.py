@@ -47,12 +47,13 @@ def upgrade() -> None:
     op.drop_column("booking", "end_date")
 
     # Create GIST index to prevent overlapping bookings for the same apartment
-    op.create_index(
-        "ix_booking_no_overlap",
-        "booking",
-        ["apartment_id", "booking_period"],
-        unique=False,
-        postgresql_using="gist",
+    # Using explicit SQL to specify operator classes (int4_ops for integer, range_ops for daterange)
+    op.execute(
+        """
+        CREATE INDEX ix_booking_no_overlap
+        ON booking
+        USING gist (apartment_id int4_ops, booking_period range_ops)
+        """
     )
 
 

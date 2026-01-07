@@ -2,7 +2,7 @@
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Enum, ForeignKey, Index, Integer, Numeric
+from sqlalchemy import Enum, ForeignKey, Index, Integer, Numeric, text
 from sqlalchemy.dialects.postgresql import DATERANGE
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -66,12 +66,14 @@ class Booking(Base):
 
     # ГИГАНТСКИЙ ПЛЮС: GIST индекс.
     # Он физически запретит в базе создание пересекающихся броней для одной квартиры.
+    # Integer needs explicit operator class for GIST
     __table_args__ = (
         Index(
             "ix_booking_no_overlap",
-            "apartment_id",
-            "booking_period",
+            text("apartment_id"),
+            text("booking_period"),
             postgresql_using="gist",
+            postgresql_ops={"apartment_id": "int4_ops", "booking_period": "range_ops"},
         ),
     )
 
