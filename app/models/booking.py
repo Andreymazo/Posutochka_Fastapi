@@ -66,16 +66,8 @@ class Booking(Base):
 
     # ГИГАНТСКИЙ ПЛЮС: GIST индекс.
     # Он физически запретит в базе создание пересекающихся броней для одной квартиры.
-    # Integer needs explicit operator class for GIST
-    __table_args__ = (
-        Index(
-            "ix_booking_no_overlap",
-            text("apartment_id"),
-            text("booking_period"),
-            postgresql_using="gist",
-            postgresql_ops={"apartment_id": "int4_ops", "booking_period": "range_ops"},
-        ),
-    )
+    # NOTE: GIST index is created via Alembic migration (not here) because it requires
+    # explicit operator classes (int4_ops, range_ops) which aren't supported by SQLAlchemy Index
 
     def __repr__(self) -> str:
         return (
