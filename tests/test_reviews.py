@@ -26,13 +26,13 @@ class TestReviewEndpoints:
             "booking_id": created_booking.id,
             "landlord_id": created_landlord.id,
             "client_id": created_client.id,
-            "author_role": "client",
+            "author_role": "CLIENT",
         }
         response = client.post("/reviews/", json=data)
         assert response.status_code == 201
         assert response.json()["rating"] == sample_review_data["rating"]
         assert response.json()["review"] == sample_review_data["review"]
-        assert response.json()["author_role"] == "client"
+        assert response.json()["author_role"] == "CLIENT"
 
     def test_get_reviews(
         self,

@@ -38,7 +38,7 @@ class TestClientReviewRelationships:
         # Verify reviews_about_me contains the landlord's review
         assert len(created_client.reviews_about_me) == 1
         assert created_client.reviews_about_me[0].id == landlord_review.id
-        assert created_client.reviews_about_me[0].author_role.value == "landlord"
+        assert created_client.reviews_about_me[0].author_role.value == "LANDLORD"
 
     def test_client_reviews_i_wrote(
         self,
@@ -66,7 +66,7 @@ class TestClientReviewRelationships:
         # Verify reviews_i_wrote contains the client's review
         assert len(created_client.reviews_i_wrote) == 1
         assert created_client.reviews_i_wrote[0].id == client_review.id
-        assert created_client.reviews_i_wrote[0].author_role.value == "client"
+        assert created_client.reviews_i_wrote[0].author_role.value == "CLIENT"
 
     def test_client_both_review_types(
         self,
@@ -104,8 +104,8 @@ class TestClientReviewRelationships:
         # Verify both types of reviews are correctly separated
         assert len(created_client.reviews_about_me) == 1
         assert len(created_client.reviews_i_wrote) == 1
-        assert created_client.reviews_about_me[0].author_role.value == "landlord"
-        assert created_client.reviews_i_wrote[0].author_role.value == "client"
+        assert created_client.reviews_about_me[0].author_role.value == "LANDLORD"
+        assert created_client.reviews_i_wrote[0].author_role.value == "CLIENT"
 
     def test_client_read_schema_includes_reviews(
         self,
@@ -147,8 +147,8 @@ class TestClientReviewRelationships:
         assert "reviews_i_wrote" in data
         assert len(data["reviews_about_me"]) == 1
         assert len(data["reviews_i_wrote"]) == 1
-        assert data["reviews_about_me"][0]["author_role"] == "landlord"
-        assert data["reviews_i_wrote"][0]["author_role"] == "client"
+        assert data["reviews_about_me"][0]["author_role"] == "LANDLORD"
+        assert data["reviews_i_wrote"][0]["author_role"] == "CLIENT"
 
 
 class TestLandlordReviewRelationships:
@@ -180,7 +180,7 @@ class TestLandlordReviewRelationships:
         # Verify reviews_about_me contains the client's review
         assert len(created_landlord.reviews_about_me) == 1
         assert created_landlord.reviews_about_me[0].id == client_review.id
-        assert created_landlord.reviews_about_me[0].author_role.value == "client"
+        assert created_landlord.reviews_about_me[0].author_role.value == "CLIENT"
 
     def test_landlord_reviews_i_wrote(
         self,
@@ -208,7 +208,7 @@ class TestLandlordReviewRelationships:
         # Verify reviews_i_wrote contains the landlord's review
         assert len(created_landlord.reviews_i_wrote) == 1
         assert created_landlord.reviews_i_wrote[0].id == landlord_review.id
-        assert created_landlord.reviews_i_wrote[0].author_role.value == "landlord"
+        assert created_landlord.reviews_i_wrote[0].author_role.value == "LANDLORD"
 
     def test_landlord_both_review_types(
         self,
@@ -246,8 +246,8 @@ class TestLandlordReviewRelationships:
         # Verify both types of reviews are correctly separated
         assert len(created_landlord.reviews_about_me) == 1
         assert len(created_landlord.reviews_i_wrote) == 1
-        assert created_landlord.reviews_about_me[0].author_role.value == "client"
-        assert created_landlord.reviews_i_wrote[0].author_role.value == "landlord"
+        assert created_landlord.reviews_about_me[0].author_role.value == "CLIENT"
+        assert created_landlord.reviews_i_wrote[0].author_role.value == "LANDLORD"
 
     def test_landlord_read_schema_includes_reviews(
         self,
@@ -289,5 +289,5 @@ class TestLandlordReviewRelationships:
         assert "reviews_i_wrote" in data
         assert len(data["reviews_about_me"]) == 1
         assert len(data["reviews_i_wrote"]) == 1
-        assert data["reviews_about_me"][0]["author_role"] == "client"
-        assert data["reviews_i_wrote"][0]["author_role"] == "landlord"
+        assert data["reviews_about_me"][0]["author_role"] == "CLIENT"
+        assert data["reviews_i_wrote"][0]["author_role"] == "LANDLORD"

@@ -14,9 +14,9 @@ if TYPE_CHECKING:
     from app.models.landlord import Landlord
 
 
-class UserRole(enum.Enum):
-    CLIENT = "client"
-    LANDLORD = "landlord"
+class UserRole(str, enum.Enum):
+    CLIENT = "CLIENT"
+    LANDLORD = "LANDLORD"
 
 
 """Rating (new model. OTO (one to one) with Booking OTM (one to many) with Landlord, Client). """

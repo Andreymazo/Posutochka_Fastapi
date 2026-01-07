@@ -1,9 +1,6 @@
-from typing import TYPE_CHECKING
+from __future__ import annotations
 
 from pydantic import BaseModel, Field
-
-if TYPE_CHECKING:
-    from app.schemas.review import ReviewRead
 
 
 class ClientBase(BaseModel):
@@ -31,7 +28,14 @@ class ClientRead(ClientBase):
 
     id: int
     user_id: int
-    reviews_about_me: list["ReviewRead"] = []
-    reviews_i_wrote: list["ReviewRead"] = []
+    reviews_about_me: list[ReviewRead] = []
+    reviews_i_wrote: list[ReviewRead] = []
 
     model_config = {"from_attributes": True}
+
+
+# Import after class definition to avoid circular import
+from app.schemas.review import ReviewRead  # noqa: E402
+
+# Rebuild model to resolve forward references
+ClientRead.model_rebuild()
