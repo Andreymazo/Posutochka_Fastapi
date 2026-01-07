@@ -30,17 +30,17 @@ class Client(Base):
     # Используем primaryjoin для фильтрации по роли автора
     reviews_about_me: Mapped[list["Review"]] = relationship(
         "Review",
-        primaryjoin="and_(Client.id == Review.client_id, Review.author_role == 'landlord')",
+        primaryjoin="and_(Client.id == Review.client_id, Review.author_role == 'LANDLORD')",
         viewonly=True,
-        order_by="Review.created_at.desc()"
+        order_by="Review.created_at.desc()",
     )
 
     # 2. Отзывы, которые САМ клиент написал об объектах/хозяевах (его история отзывов)
     reviews_i_wrote: Mapped[list["Review"]] = relationship(
         "Review",
-        primaryjoin="and_(Client.id == Review.client_id, Review.author_role == 'client')",
+        primaryjoin="and_(Client.id == Review.client_id, Review.author_role == 'CLIENT')",
         viewonly=True,
-        order_by="Review.created_at.desc()"
+        order_by="Review.created_at.desc()",
     )
 
     def __repr__(self) -> str:

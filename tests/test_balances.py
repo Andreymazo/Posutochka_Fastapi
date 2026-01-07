@@ -1,10 +1,12 @@
 """Tests for Balance API endpoints."""
 
+from decimal import Decimal
 from typing import Any
+
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
+
 from app.models import Balance, User
-from decimal import Decimal
 
 
 class TestBalanceEndpoints:

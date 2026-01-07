@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pydantic import BaseModel, Field
 
 
@@ -26,5 +28,14 @@ class LandlordRead(LandlordBase):
 
     id: int
     user_id: int
+    reviews_about_me: list[ReviewRead] = []
+    reviews_i_wrote: list[ReviewRead] = []
 
     model_config = {"from_attributes": True}
+
+
+# Import after class definition to avoid circular import
+from app.schemas.review import ReviewRead  # noqa: E402
+
+# Rebuild model to resolve forward references
+LandlordRead.model_rebuild()
