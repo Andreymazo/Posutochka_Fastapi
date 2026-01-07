@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.models import Booking, Client, Landlord, Review
+from app.models.review import UserRole
 
 
 class TestClientReviewRelationships:
@@ -28,7 +29,7 @@ class TestClientReviewRelationships:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="landlord",
+            author_role=UserRole.LANDLORD,
         )
         db_session.add(landlord_review)
         db_session.commit()
@@ -56,7 +57,7 @@ class TestClientReviewRelationships:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="client",
+            author_role=UserRole.CLIENT,
         )
         db_session.add(client_review)
         db_session.commit()
@@ -84,7 +85,7 @@ class TestClientReviewRelationships:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="landlord",
+            author_role=UserRole.LANDLORD,
         )
         # Create a review by client
         client_review = Review(
@@ -93,7 +94,7 @@ class TestClientReviewRelationships:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="client",
+            author_role=UserRole.CLIENT,
         )
         db_session.add(landlord_review)
         db_session.add(client_review)
@@ -122,7 +123,7 @@ class TestClientReviewRelationships:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="landlord",
+            author_role=UserRole.LANDLORD,
         )
         client_review = Review(
             rating=4,
@@ -130,7 +131,7 @@ class TestClientReviewRelationships:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="client",
+            author_role=UserRole.CLIENT,
         )
         db_session.add(landlord_review)
         db_session.add(client_review)
@@ -170,7 +171,7 @@ class TestLandlordReviewRelationships:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="client",
+            author_role=UserRole.CLIENT,
         )
         db_session.add(client_review)
         db_session.commit()
@@ -198,7 +199,7 @@ class TestLandlordReviewRelationships:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="landlord",
+            author_role=UserRole.LANDLORD,
         )
         db_session.add(landlord_review)
         db_session.commit()
@@ -226,7 +227,7 @@ class TestLandlordReviewRelationships:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="client",
+            author_role=UserRole.CLIENT,
         )
         # Create a review by landlord about client
         landlord_review = Review(
@@ -235,7 +236,7 @@ class TestLandlordReviewRelationships:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="landlord",
+            author_role=UserRole.LANDLORD,
         )
         db_session.add(client_review)
         db_session.add(landlord_review)
@@ -264,7 +265,7 @@ class TestLandlordReviewRelationships:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="client",
+            author_role=UserRole.CLIENT,
         )
         landlord_review = Review(
             rating=4,
@@ -272,7 +273,7 @@ class TestLandlordReviewRelationships:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="landlord",
+            author_role=UserRole.LANDLORD,
         )
         db_session.add(client_review)
         db_session.add(landlord_review)

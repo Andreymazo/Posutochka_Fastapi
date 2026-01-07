@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.models import Booking, Client, Landlord, Review
+from app.models.review import UserRole
 
 
 class TestReviewEndpoints:
@@ -49,7 +50,7 @@ class TestReviewEndpoints:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="client",
+            author_role=UserRole.CLIENT,
         )
         db_session.add(review)
         db_session.commit()
@@ -74,7 +75,7 @@ class TestReviewEndpoints:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="client",
+            author_role=UserRole.CLIENT,
         )
         db_session.add(review)
         db_session.commit()
@@ -106,7 +107,7 @@ class TestReviewEndpoints:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="client",
+            author_role=UserRole.CLIENT,
         )
         db_session.add(review)
         db_session.commit()
@@ -134,7 +135,7 @@ class TestReviewEndpoints:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="client",
+            author_role=UserRole.CLIENT,
         )
         db_session.add(review)
         db_session.commit()
@@ -163,7 +164,7 @@ class TestReviewEndpoints:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="client",
+            author_role=UserRole.CLIENT,
         )
         db_session.add(review)
         db_session.commit()
@@ -189,7 +190,7 @@ class TestReviewEndpoints:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="client",
+            author_role=UserRole.CLIENT,
         )
         db_session.add(review)
         db_session.commit()
@@ -215,7 +216,7 @@ class TestReviewEndpoints:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
-            author_role="client",
+            author_role=UserRole.CLIENT,
         )
         db_session.add(review)
         db_session.commit()
