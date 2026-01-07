@@ -25,7 +25,23 @@ class Client(Base):
     # Relationships
     user: Mapped["User"] = relationship(back_populates="client")
     bookings: Mapped[list["Booking"]] = relationship(back_populates="client")
-    reviews: Mapped[list["Review"]] = relationship(back_populates="client")
+    # reviews: Mapped[list["Review"]] = relationship(back_populates="client")
+    # 1. Отзывы, которые оставили АРЕНДОДАТЕЛИ об этом клиенте (его репутация как гостя)
+    # Используем primaryjoin для фильтрации по роли автора
+    reviews_about_me: Mapped[list["Review"]] = relationship(
+        "Review",
+        primaryjoin="and_(Client.id == Review.client_id, Review.author_role == 'landlord')",
+        viewonly=True,
+        order_by="Review.created_at.desc()"
+    )
+
+    # 2. Отзывы, которые САМ клиент написал об объектах/хозяевах (его история отзывов)
+    reviews_i_wrote: Mapped[list["Review"]] = relationship(
+        "Review",
+        primaryjoin="and_(Client.id == Review.client_id, Review.author_role == 'client')",
+        viewonly=True,
+        order_by="Review.created_at.desc()"
+    )
 
     def __repr__(self) -> str:
         return f"Client(id={self.id}, name='{self.first_name} {self.last_name}')"

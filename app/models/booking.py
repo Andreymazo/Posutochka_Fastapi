@@ -46,9 +46,11 @@ class Booking(Base):
     landlord: Mapped["Landlord"] = relationship(back_populates="bookings")
     client: Mapped["Client"] = relationship(back_populates="bookings")
     apartment: Mapped["Apartment"] = relationship(back_populates="bookings")
-    # Отзыв (1-к-1)
-    review: Mapped["Review | None"] = relationship(back_populates="booking", uselist=False)
-
+    # # Отзыв (1-к-1) Решили сделать двустороннюю возможность отзывы писать 
+    # и на клиента тоже, поэтому закоммнтируме пока
+    # review: Mapped["Review | None"] = relationship(back_populates="booking", uselist=False)
+    
+    reviews: Mapped[list["Review"]] = relationship(back_populates="booking")
     # One-to-Many: Одна бронь — список платежей и балансовых транзакций
     # В моделях Payment и Balance поле должно называться back_populates="booking"
     # One-to-Many: Одна бронь — много платежей (фактов оплаты)

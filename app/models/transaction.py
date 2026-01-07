@@ -27,7 +27,9 @@ if TYPE_CHECKING:
 
 
 class Transaction(Base):
-    """История начислений: за какую бронь сколько упало"""
+    """История начислений: за какую бронь сколько упало. Фиксирует 
+    внутреннее движение средств внутри вашей системы учета 
+    (между балансами пользователей - Клиента и Арендодателя)"""
 
     __tablename__ = "wallet_transactions"
 
@@ -36,6 +38,8 @@ class Transaction(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     # Аналог auto_now=True (обновляется при каждом UPDATE)
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+    """: Это сумма, которая зачисляется на баланс конкретного пользователя 
+    или списывается с него. Эта сумма может отличаться от суммы amount в Payment"""
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     transaction_type: Mapped[TransactionType] = mapped_column(
         SQLEnum(TransactionType), nullable=False, index=True

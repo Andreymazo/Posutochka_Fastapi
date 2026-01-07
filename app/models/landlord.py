@@ -26,7 +26,21 @@ class Landlord(Base):
     user: Mapped["User"] = relationship(back_populates="landlord")
     bookings: Mapped[list["Booking"]] = relationship(back_populates="landlord")
     apartments: Mapped[list["Apartment"]] = relationship(back_populates="landlord")
-    reviews: Mapped[list["Review"]] = relationship(back_populates="landlord")
+    # Разделим отзывы на 2 вида сам и о самом
+    # reviews: Mapped[list["Review"]] = relationship(back_populates="landlord")
+    # Отзывы, которые оставили КЛИЕНТЫ об этом арендодателе
+    reviews_about_me: Mapped[list["Review"]] = relationship(
+    "Review",
+    primaryjoin="and_(Landlord.id == Review.landlord_id, Review.author_role == 'client')",
+    viewonly=True)
+    # 2. Отзывы, которые САМ арендодатель написал о гостях (его история оценок)
+    reviews_i_wrote: Mapped[list["Review"]] = relationship(
+        "Review",
+        primaryjoin="and_(Landlord.id == Review.landlord_id, Review.author_role == 'landlord')",
+        viewonly=True
+    )
 
     def __repr__(self) -> str:
         return f"Landlord(id={self.id}, name='{self.first_name} {self.last_name}')"
+
+

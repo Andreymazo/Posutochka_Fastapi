@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class Payment(Base):
-    """Payment model - represents a booking payment."""
+    """Payment model - represents a booking payment.запись о внешнем событии оплаты"""
 
     __tablename__ = "payment"
 
@@ -20,11 +20,9 @@ class Payment(Base):
     payment_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     payment_status: Mapped[str] = mapped_column(
         Enum("paid", "pending", "failed", name="payment_status", create_type=False),
-        nullable=False,
-    )
+        nullable=False,)
     # Foreign keys
     booking_id: Mapped[int] = mapped_column(ForeignKey("booking.id"), nullable=False)
-
     # Relationships
     booking: Mapped["Booking"] = relationship(back_populates="payments")
 
