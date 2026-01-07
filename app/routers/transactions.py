@@ -43,6 +43,7 @@ def create_transaction(
     transaction = Transaction(
         user_id=transaction_data.user_id,
         booking_id=transaction_data.booking_id,
+        balance_id=transaction_data.balance_id,
         amount=transaction_data.amount,
         transaction_type=transaction_data.transaction_type.value,
     )

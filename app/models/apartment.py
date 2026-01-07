@@ -1,5 +1,6 @@
-from typing import TYPE_CHECKING
 from decimal import Decimal
+from typing import TYPE_CHECKING
+
 from geoalchemy2.types import Geography
 from sqlalchemy import ForeignKey, Integer, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship

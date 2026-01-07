@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+
 from pydantic import BaseModel, Field
 
 
@@ -16,6 +17,7 @@ class BalanceCreate(BalanceBase):
     amount: Decimal = Field(gt=0, description="Сумма должна быть больше нуля")
     user_id: int
 
+
 class BalanceUpdate(BaseModel):
     """Schema for updating a Balance - all fields optional."""
 
@@ -26,7 +28,7 @@ class BalanceRead(BalanceBase):
     """Schema for reading Balance data (response)."""
 
     id: int
-    booking_id: int
+    user_id: int
     created_at: datetime
     updated_at: datetime
 

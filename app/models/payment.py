@@ -24,7 +24,7 @@ class Payment(Base):
     )
     # Foreign keys
     booking_id: Mapped[int] = mapped_column(ForeignKey("booking.id"), nullable=False)
-    
+
     # Relationships
     booking: Mapped["Booking"] = relationship(back_populates="payments")
 

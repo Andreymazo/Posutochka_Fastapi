@@ -1,5 +1,5 @@
 """Shared test fixtures and configuration."""
-from sqlalchemy.ext.asyncio import AsyncSession
+
 import os
 from collections.abc import Generator
 from contextlib import asynccontextmanager
@@ -12,7 +12,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.database import get_db
-from app.models import Apartment, Base, Booking, Client, Landlord, User
+from app.models import Apartment, Balance, Base, Booking, Client, Landlord, User
 from app.routers import (
     apartments,
     balances,
@@ -320,15 +320,6 @@ def created_booking(
     db_session.refresh(booking)
     return booking
 
-@pytest.fixture
-async def created_user(db_session: AsyncSession, sample_user_data: dict[str, Any]) -> User:
-    """Создает реального пользователя из сырых данных."""
-    
-    user = User(**sample_user_data)
-    db_session.add(user)
-    await db_session.commit()
-    await db_session.refresh(user)
-    return user
 
 @pytest.fixture
 def sample_balance_data() -> dict[str, Any]:
@@ -362,3 +353,18 @@ def sample_transaction_data() -> dict[str, Any]:
         "amount": 250.0,
         "transaction_type": "booking_payment",
     }
+
+
+@pytest.fixture
+def created_balance(
+    db_session: Session, created_user: User, sample_balance_data: dict[str, Any]
+) -> Balance:
+    """Create and return a balance in the database."""
+    balance = Balance(
+        user_id=created_user.id,
+        amount=sample_balance_data["amount"],
+    )
+    db_session.add(balance)
+    db_session.commit()
+    db_session.refresh(balance)
+    return balance

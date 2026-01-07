@@ -26,6 +26,7 @@ class TransactionCreate(TransactionBase):
 
     user_id: int
     booking_id: int
+    balance_id: int
 
 
 class TransactionUpdate(BaseModel):
@@ -41,6 +42,7 @@ class TransactionRead(TransactionBase):
     id: int
     user_id: int
     booking_id: int
+    balance_id: int
     created_at: datetime
     updated_at: datetime
 
