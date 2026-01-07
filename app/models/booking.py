@@ -2,7 +2,7 @@
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Enum, ForeignKey, Index, Integer, Numeric, text
+from sqlalchemy import Enum, ForeignKey, Integer, Numeric
 from sqlalchemy.dialects.postgresql import DATERANGE
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
