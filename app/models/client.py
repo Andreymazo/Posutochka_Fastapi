@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
 
 from app.models.base import Base
 
@@ -30,7 +30,7 @@ class Client(Base):
     # Используем primaryjoin для фильтрации по роли автора
     reviews_about_me: Mapped[list["Review"]] = relationship(
         "Review",
-        primaryjoin="and_(Client.id == Review.client_id, Review.author_role == 'landlord')",
+        primaryjoin="and_(Client.id == foreign(Review.client_id), Review.author_role == 'LANDLORD')",
         viewonly=True,
         order_by="Review.created_at.desc()",
     )
@@ -38,7 +38,7 @@ class Client(Base):
     # 2. Отзывы, которые САМ клиент написал об объектах/хозяевах (его история отзывов)
     reviews_i_wrote: Mapped[list["Review"]] = relationship(
         "Review",
-        primaryjoin="and_(Client.id == Review.client_id, Review.author_role == 'client')",
+        primaryjoin="and_(Client.id == foreign(Review.client_id), Review.author_role == 'CLIENT')",
         viewonly=True,
         order_by="Review.created_at.desc()",
     )
