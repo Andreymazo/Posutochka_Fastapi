@@ -1,11 +1,10 @@
 """Tests for Balance API endpoints."""
 
 from typing import Any
-
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-
 from app.models import Balance, User
+from decimal import Decimal
 
 
 class TestBalanceEndpoints:
@@ -39,8 +38,7 @@ class TestBalanceEndpoints:
         response = client.post("/balances/", json=data)
 
         assert response.status_code == 201
-        assert response.json()["amount"] == sample_balance_data["amount"]
-        # Проверку booking_id тоже удаляем, так как этого поля нет в модели
+        assert Decimal(response.json()["amount"]) == Decimal(sample_balance_data["amount"])
         assert "id" in response.json()
 
     def test_get_balances(
@@ -81,7 +79,7 @@ class TestBalanceEndpoints:
         response = client.get(f"/balances/{balance.id}")
         assert response.status_code == 200
         assert response.json()["id"] == balance.id
-        assert response.json()["amount"] == sample_balance_data["amount"]
+        assert Decimal(response.json()["amount"]) == Decimal(sample_balance_data["amount"])
 
     def test_get_balance_not_found(self, client: TestClient) -> None:
         """Test retrieving a non-existent balance."""
@@ -107,7 +105,7 @@ class TestBalanceEndpoints:
         update_data = {"amount": 500.0}
         response = client.patch(f"/balances/{balance.id}", json=update_data)
         assert response.status_code == 200
-        assert response.json()["amount"] == 500.0
+        assert Decimal(response.json()["amount"]) == 500.0
 
     def test_delete_balance(
         self,

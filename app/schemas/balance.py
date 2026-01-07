@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 class BalanceBase(BaseModel):
     """Base schema for Balance - common fields."""
 
-    amount: float = Field(..., gt=0)
+    amount: Decimal = Field(..., gt=0)
 
 
 class BalanceCreate(BalanceBase):
@@ -21,7 +21,7 @@ class BalanceCreate(BalanceBase):
 class BalanceUpdate(BaseModel):
     """Schema for updating a Balance - all fields optional."""
 
-    amount: float | None = Field(None, gt=0)
+    amount: Decimal | None = Field(None, gt=0)
 
 
 class BalanceRead(BalanceBase):
