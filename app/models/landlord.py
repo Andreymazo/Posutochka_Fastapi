@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, Integer, String
-from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
 
@@ -31,13 +31,13 @@ class Landlord(Base):
     # Отзывы, которые оставили КЛИЕНТЫ об этом арендодателе
     reviews_about_me: Mapped[list["Review"]] = relationship(
         "Review",
-        primaryjoin="and_(Landlord.id == foreign(Review.landlord_id), Review.author_role == 'CLIENT')",
+        primaryjoin="and_(Landlord.id == Review.landlord_id, Review.author_role == 'CLIENT')",
         viewonly=True,
     )
     # 2. Отзывы, которые САМ арендодатель написал о гостях (его история оценок)
     reviews_i_wrote: Mapped[list["Review"]] = relationship(
         "Review",
-        primaryjoin="and_(Landlord.id == foreign(Review.landlord_id), Review.author_role == 'LANDLORD')",
+        primaryjoin="and_(Landlord.id == Review.landlord_id, Review.author_role == 'LANDLORD')",
         viewonly=True,
     )
 
