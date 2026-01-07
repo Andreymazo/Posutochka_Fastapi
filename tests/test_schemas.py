@@ -128,9 +128,11 @@ class TestBookingSchemas:
 
     def test_booking_create_valid(self) -> None:
         """Test creating a valid booking."""
+        from datetime import date
+
         booking = BookingCreate(
-            start_date=datetime(2024, 1, 15, 14, 0, tzinfo=UTC),
-            end_date=datetime(2024, 1, 20, 11, 0, tzinfo=UTC),
+            start_date=date(2024, 1, 15),
+            end_date=date(2024, 1, 20),
             cost=250.0,
             booking_status=BookingStatus.pending,
             landlord_id=1,
