@@ -313,9 +313,11 @@ class TestReviewSchemas:
             booking_id=1,
             landlord_id=1,
             client_id=1,
+            author_role="client",
         )
         assert review.rating == 5
         assert review.review == "Excellent service!"
+        assert review.author_role == "client"
 
     def test_review_create_without_text(self) -> None:
         """Test creating a review without review text."""
@@ -325,6 +327,7 @@ class TestReviewSchemas:
             booking_id=1,
             landlord_id=1,
             client_id=1,
+            author_role="client",
         )
         assert review.rating == 4
         assert review.review is None

@@ -47,6 +47,7 @@ def create_review(review_data: ReviewCreate, db: Session = Depends(get_db)) -> R
         client_id=review_data.client_id,
         rating=review_data.rating,
         review=review_data.review,
+        author_role=review_data.author_role,
     )
     db.add(review)
     db.commit()

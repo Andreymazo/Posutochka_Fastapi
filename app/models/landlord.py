@@ -30,17 +30,16 @@ class Landlord(Base):
     # reviews: Mapped[list["Review"]] = relationship(back_populates="landlord")
     # Отзывы, которые оставили КЛИЕНТЫ об этом арендодателе
     reviews_about_me: Mapped[list["Review"]] = relationship(
-    "Review",
-    primaryjoin="and_(Landlord.id == Review.landlord_id, Review.author_role == 'client')",
-    viewonly=True)
+        "Review",
+        primaryjoin="and_(Landlord.id == Review.landlord_id, Review.author_role == 'client')",
+        viewonly=True,
+    )
     # 2. Отзывы, которые САМ арендодатель написал о гостях (его история оценок)
     reviews_i_wrote: Mapped[list["Review"]] = relationship(
         "Review",
         primaryjoin="and_(Landlord.id == Review.landlord_id, Review.author_role == 'landlord')",
-        viewonly=True
+        viewonly=True,
     )
 
     def __repr__(self) -> str:
         return f"Landlord(id={self.id}, name='{self.first_name} {self.last_name}')"
-
-

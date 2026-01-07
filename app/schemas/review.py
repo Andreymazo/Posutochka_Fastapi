@@ -16,6 +16,7 @@ class ReviewCreate(ReviewBase):
     booking_id: int
     landlord_id: int
     client_id: int
+    author_role: str
 
 
 class ReviewUpdate(BaseModel):
@@ -32,6 +33,7 @@ class ReviewRead(ReviewBase):
     booking_id: int
     landlord_id: int
     client_id: int
+    author_role: str
     created_at: datetime
     updated_at: datetime
 

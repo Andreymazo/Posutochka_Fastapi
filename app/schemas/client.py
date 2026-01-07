@@ -1,4 +1,9 @@
+from typing import TYPE_CHECKING
+
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from app.schemas.review import ReviewRead
 
 
 class ClientBase(BaseModel):
@@ -26,5 +31,7 @@ class ClientRead(ClientBase):
 
     id: int
     user_id: int
+    reviews_about_me: list["ReviewRead"] = []
+    reviews_i_wrote: list["ReviewRead"] = []
 
     model_config = {"from_attributes": True}

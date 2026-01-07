@@ -32,7 +32,7 @@ class Client(Base):
         "Review",
         primaryjoin="and_(Client.id == Review.client_id, Review.author_role == 'landlord')",
         viewonly=True,
-        order_by="Review.created_at.desc()"
+        order_by="Review.created_at.desc()",
     )
 
     # 2. Отзывы, которые САМ клиент написал об объектах/хозяевах (его история отзывов)
@@ -40,7 +40,7 @@ class Client(Base):
         "Review",
         primaryjoin="and_(Client.id == Review.client_id, Review.author_role == 'client')",
         viewonly=True,
-        order_by="Review.created_at.desc()"
+        order_by="Review.created_at.desc()",
     )
 
     def __repr__(self) -> str:

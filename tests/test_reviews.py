@@ -25,11 +25,13 @@ class TestReviewEndpoints:
             "booking_id": created_booking.id,
             "landlord_id": created_landlord.id,
             "client_id": created_client.id,
+            "author_role": "client",
         }
         response = client.post("/reviews/", json=data)
         assert response.status_code == 201
         assert response.json()["rating"] == sample_review_data["rating"]
         assert response.json()["review"] == sample_review_data["review"]
+        assert response.json()["author_role"] == "client"
 
     def test_get_reviews(
         self,
@@ -47,6 +49,7 @@ class TestReviewEndpoints:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
+            author_role="client",
         )
         db_session.add(review)
         db_session.commit()
@@ -71,6 +74,7 @@ class TestReviewEndpoints:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
+            author_role="client",
         )
         db_session.add(review)
         db_session.commit()
@@ -102,6 +106,7 @@ class TestReviewEndpoints:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
+            author_role="client",
         )
         db_session.add(review)
         db_session.commit()
@@ -129,6 +134,7 @@ class TestReviewEndpoints:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
+            author_role="client",
         )
         db_session.add(review)
         db_session.commit()
@@ -157,6 +163,7 @@ class TestReviewEndpoints:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
+            author_role="client",
         )
         db_session.add(review)
         db_session.commit()
@@ -182,6 +189,7 @@ class TestReviewEndpoints:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
+            author_role="client",
         )
         db_session.add(review)
         db_session.commit()
@@ -207,6 +215,7 @@ class TestReviewEndpoints:
             booking_id=created_booking.id,
             landlord_id=created_landlord.id,
             client_id=created_client.id,
+            author_role="client",
         )
         db_session.add(review)
         db_session.commit()
