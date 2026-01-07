@@ -190,8 +190,8 @@ def sample_client_data() -> dict[str, Any]:
 def sample_booking_data() -> dict[str, Any]:
     """Sample booking data for testing."""
     return {
-        "start_date": "2024-01-15T14:00:00",
-        "end_date": "2024-01-20T11:00:00",
+        "start_date": "2024-01-15",
+        "end_date": "2024-01-20",
         "cost": 250.0,
         "booking_status": "pending",
     }
@@ -304,11 +304,19 @@ def created_booking(
     sample_booking_data: dict[str, Any],
 ) -> Booking:
     """Create and return a booking in the database."""
-    from datetime import datetime
+    from datetime import date
+
+    from sqlalchemy.dialects.postgresql import Range
+
+    # Convert date strings to date objects
+    start_date = date.fromisoformat(sample_booking_data["start_date"])
+    end_date = date.fromisoformat(sample_booking_data["end_date"])
+
+    # Create Range object for booking_period
+    booking_period = Range(start_date, end_date, bounds="[)")
 
     booking = Booking(
-        start_date=datetime.fromisoformat(sample_booking_data["start_date"]),
-        end_date=datetime.fromisoformat(sample_booking_data["end_date"]),
+        booking_period=booking_period,
         cost=sample_booking_data["cost"],
         booking_status=sample_booking_data["booking_status"],
         landlord_id=created_landlord.id,
