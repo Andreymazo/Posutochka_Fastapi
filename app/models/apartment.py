@@ -8,10 +8,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 
 if TYPE_CHECKING:
+    from app.models.apartmentavailability import ApartmentAvailability
     from app.models.booking import Booking
     from app.models.landlord import Landlord
     from app.models.photo import Photo
-    from app.models.apartmentavailability import ApartmentAvailability
 
 
 class Apartment(Base):
@@ -40,7 +40,7 @@ class Apartment(Base):
     # Взаимосвязь с правилами доступности и цен
     # Указываем lazy="selectin" для эффективной подгрузки в асинхронных запросах
     availability_rules: Mapped[list["ApartmentAvailability"]] = relationship(
-        back_populates="apartment", 
+        back_populates="apartment",
         cascade="all, delete-orphan",
         lazy="selectin"
     )

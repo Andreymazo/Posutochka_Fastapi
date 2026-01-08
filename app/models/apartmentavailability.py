@@ -1,11 +1,10 @@
 from datetime import date
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, String, Integer, Numeric, Boolean
-from sqlalchemy.dialects.postgresql import DATERANGE, Range, ExcludeConstraint
+from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String
+from sqlalchemy.dialects.postgresql import DATERANGE, Range
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.schema import ExcludeConstraint
 
 from app.models.base import Base
 
@@ -20,7 +19,7 @@ class ApartmentAvailability(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
 
     apartment_id: Mapped[int] = mapped_column(
-        ForeignKey("apartment.id", ondelete="CASCADE"), 
+        ForeignKey("apartment.id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )
@@ -42,15 +41,8 @@ class ApartmentAvailability(Base):
 
     # Relationships
     apartment: Mapped["Apartment"] = relationship(back_populates="availability_rules")
- 
-    __table_args__ = (
-        # Это ограничение (Constraint) + Индекс (GIST)
-        # Оно говорит: "Запрети вставку, если apartment_id совпадает (=) 
-        # И blocked_period пересекается (&&)"
-        ExcludeConstraint(
-            ("apartment_id", "="),
-            ("blocked_period", "&&"),
-            name="exclude_overlapping_availabilities",
-            using="gist",
-        ),
-    )
+
+    # NOTE: GIST exclusion constraint for preventing overlapping availability rules
+    # is created via Alembic migration because it requires explicit operator classes
+    # (int4_ops for apartment_id, range_ops for blocked_period) which aren't
+    # supported by SQLAlchemy's ExcludeConstraint
