@@ -3,9 +3,8 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String
-from sqlalchemy.dialects.postgresql import DATERANGE, Range
+from sqlalchemy.dialects.postgresql import DATERANGE, ExcludeConstraint, Range
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.schema import ExcludeConstraint
 
 from app.models.base import Base
 
