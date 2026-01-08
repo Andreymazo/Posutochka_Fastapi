@@ -101,7 +101,7 @@ class BookingService:
 
         db.add(new_booking)
         await db.commit()
-        await db.refresh(new_booking)
+        await db.refresh(new_booking, ["payments"])
         return new_booking
 
     @staticmethod
@@ -218,7 +218,7 @@ class BookingService:
             setattr(booking, field, value)
 
         await db.commit()
-        await db.refresh(booking)
+        await db.refresh(booking, ["payments"])
         return booking
 
     @staticmethod
