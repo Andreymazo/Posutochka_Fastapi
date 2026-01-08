@@ -5,6 +5,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import and_, exists, or_, select
 from sqlalchemy.dialects.postgresql import Range
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.apartmentavailability import ApartmentAvailability
 from app.models.booking import Booking
@@ -118,7 +119,11 @@ class BookingService:
         Raises:
             HTTPException: If booking not found
         """
-        query = select(Booking).where(Booking.id == booking_id)
+        query = (
+            select(Booking)
+            .where(Booking.id == booking_id)
+            .options(selectinload(Booking.payments))
+        )
         result = await db.execute(query)
         booking = result.scalar_one_or_none()
 
@@ -152,7 +157,7 @@ class BookingService:
         Returns:
             List of bookings
         """
-        query = select(Booking)
+        query = select(Booking).options(selectinload(Booking.payments))
 
         if landlord_id:
             query = query.where(Booking.landlord_id == landlord_id)
