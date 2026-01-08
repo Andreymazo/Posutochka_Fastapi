@@ -37,12 +37,16 @@ platformdirs==4.5.1
 pluggy==1.6.0
 pre_commit==4.5.1
 propcache==0.4.1
+psycopg==3.3.2
+psycopg-binary==3.3.2
+psycopg-pool==3.3.0
 psycopg2-binary==2.9.10
 pydantic==2.12.5
-pydantic_core==2.41.5
 pydantic-shapely==1.0.0a6
+pydantic_core==2.41.5
 Pygments==2.19.2
 pytest==9.0.2
+pytest-asyncio==1.3.0
 pytest-cov==7.0.0
 python-dotenv==1.2.1
 PyYAML==6.0.3

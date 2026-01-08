@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from app.models.booking import Booking
     from app.models.landlord import Landlord
     from app.models.photo import Photo
+    from app.models.apartmentavailability import ApartmentAvailability
 
 
 class Apartment(Base):
@@ -34,9 +35,15 @@ class Apartment(Base):
     )
     # Бронирования: список всех броней этой квартиры
     bookings: Mapped[list["Booking"]] = relationship(back_populates="apartment")
-
     # Один владелец у одной квартиры, но в Landlord - apartments - список:
     landlord: Mapped["Landlord"] = relationship(back_populates="apartments")
+    # Взаимосвязь с правилами доступности и цен
+    # Указываем lazy="selectin" для эффективной подгрузки в асинхронных запросах
+    availability_rules: Mapped[list["ApartmentAvailability"]] = relationship(
+        back_populates="apartment", 
+        cascade="all, delete-orphan",
+        lazy="selectin"
+    )
 
     # Foreign Keys
     landlord_id: Mapped[int] = mapped_column(
