@@ -1,5 +1,6 @@
 # SQLAlchemy Models
 from app.models.apartment import Apartment
+from app.models.apartmentavailability import ApartmentAvailability
 from app.models.balance import Balance
 from app.models.base import Base
 from app.models.booking import Booking
@@ -14,6 +15,7 @@ from app.models.user import User
 
 __all__ = [
     "Apartment",
+    "ApartmentAvailability",
     "Balance",
     "Base",
     "Booking",

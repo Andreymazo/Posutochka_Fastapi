@@ -1,6 +1,7 @@
 # API Routers
 from app.routers import (
     apartments,
+    availability,
     balances,
     bookings,
     clients,
@@ -15,6 +16,7 @@ from app.routers import (
 
 __all__ = [
     "apartments",
+    "availability",
     "balances",
     "bookings",
     "clients",

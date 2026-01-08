@@ -6,6 +6,7 @@ from app.database import engine
 from app.models import Base
 from app.routers import (
     apartments,
+    availability,
     balances,
     bookings,
     clients,
@@ -41,6 +42,7 @@ app.include_router(clients.router)
 app.include_router(apartments.router)
 app.include_router(photos.router)
 app.include_router(bookings.router)
+app.include_router(availability.router)
 app.include_router(payments.router)
 app.include_router(balances.router)
 app.include_router(reviews.router)
