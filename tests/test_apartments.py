@@ -13,9 +13,7 @@ class TestApartmentEndpoints:
         self, client: TestClient, sample_apartment_data: dict[str, Any]
     ) -> None:
         """Test creating a new apartment."""
-        print("sample_apartment_data=============================", sample_apartment_data)
         response = client.post("/apartments/", json=sample_apartment_data)
-        print("data==============================", response.__dict__)
         assert response.status_code == 201
         data = response.json()
 
