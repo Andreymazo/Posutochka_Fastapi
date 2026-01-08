@@ -1,12 +1,12 @@
 # from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from app.models.base import Base
-from sqlalchemy.dialects.postgresql import DATERANGE
-from sqlalchemy import Index
 
+from sqlalchemy import Enum, ForeignKey, Integer, Numeric
+from sqlalchemy.dialects.postgresql import DATERANGE
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.base import Base
 
 if TYPE_CHECKING:
     from app.models.apartment import Apartment
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from app.models.payment import Payment
     from app.models.review import Review
     from app.models.transaction import Transaction
-    
+
 
 class Booking(Base):
     """Booking model - represents a reservation."""
@@ -64,22 +64,18 @@ class Booking(Base):
     # имя атрибута 'transactions' должно совпадать с back_populates в Transaction
     transactions: Mapped[list["Transaction"]] = relationship(back_populates="booking")
 
-    # ГИГАНТСКИЙ ПЛЮС: GIST индекс. 
+    # ГИГАНТСКИЙ ПЛЮС: GIST индекс.
     # Он физически запретит в базе создание пересекающихся броней для одной квартиры.
-    __table_args__ = (
-        Index(
-            "ix_booking_no_overlap",
-            "apartment_id",
-            "booking_period",
-            postgresql_using="gist",
-        ),
-    )
+    # NOTE: GIST index is created via Alembic migration (not here) because it requires
+    # explicit operator classes (int4_ops, range_ops) which aren't supported by SQLAlchemy Index
+
     def __repr__(self) -> str:
         return (
             f"Booking(id={self.id}, apartment_id={self.apartment_id}, "
             f"status='{self.booking_status}')"
         )
-  
+
+
 # Важное примечание для миграций (2026):
 # Когда вы будете создавать миграцию через Alembic, вам нужно будет вручную добавить команду для расширения btree_gist, иначе индекс не создастся. В файле миграции добавьте:
 # python
@@ -108,7 +104,7 @@ class Booking(Base):
 
 # Используйте код с осторожностью.
 # 2. Поиск доступности (Самое важное изменение)
-# Запросы на поиск свободных квартир теперь пишутся через операторы пересечения. В SQL это 
+# Запросы на поиск свободных квартир теперь пишутся через операторы пересечения. В SQL это
 # оператор &&, в SQLAlchemy — метод .overlaps().
 # Запрос "Найти квартиры, которые ЗАНЯТЫ в эти даты":
 # python
@@ -121,7 +117,7 @@ class Booking(Base):
 # Используйте код с осторожностью.
 # 3. Изменения в Pydantic-схемах
 # Поскольку DATERANGE — это специфический тип Postgres, Pydantic не умеет его "готовить" из коробки.
-#  Вам придется либо разбирать его в GetterDict, либо оставить в схемах два поля 
+#  Вам придется либо разбирать его в GetterDict, либо оставить в схемах два поля
 # (start_date, end_date), а в модель базы данных превращать их в Range на уровне сервиса.
 # Рекомендуемая схема:
 # python
@@ -167,7 +163,7 @@ class Booking(Base):
 
 # Используйте код с осторожностью.
 # Итог:
-# Главное изменение — ментальное. Вы перестаете думать о двух независимых 
+# Главное изменение — ментальное. Вы перестаете думать о двух независимых
 # колонках и начинаете воспринимать бронь как единый неизменяемый отрезок
-# времени. Это избавляет вас от багов типа "дата выезда раньше даты заезда" 
+# времени. Это избавляет вас от багов типа "дата выезда раньше даты заезда"
 # еще на уровне архитектуры. [1][2]
