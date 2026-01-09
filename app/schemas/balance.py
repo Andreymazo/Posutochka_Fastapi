@@ -7,21 +7,21 @@ from pydantic import BaseModel, Field
 class BalanceBase(BaseModel):
     """Base schema for Balance - common fields."""
 
-    amount: Decimal = Field(..., gt=0)
+    current_balance: Decimal = Field(..., gt=0)
 
 
 class BalanceCreate(BalanceBase):
     """Schema for creating a new Balance."""
 
     # Field(gt=0) заставит Pydantic выбрасывать ValidationError при значении 0 или меньше
-    amount: Decimal = Field(gt=0, description="Сумма должна быть больше нуля")
+    current_balance: Decimal = Field(gt=0, description="Сумма должна быть больше нуля")
     user_id: int
 
 
 class BalanceUpdate(BaseModel):
     """Schema for updating a Balance - all fields optional."""
 
-    amount: Decimal | None = Field(None, gt=0)
+    current_balance: Decimal | None = Field(None, gt=0)
 
 
 class BalanceRead(BalanceBase):

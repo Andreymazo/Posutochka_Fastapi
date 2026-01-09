@@ -24,7 +24,7 @@ def upgrade() -> None:
     """Upgrade schema - replace start_date/end_date with booking_period DATERANGE."""
     # Enable btree_gist extension for GIST index on DATERANGE
     op.execute("CREATE EXTENSION IF NOT EXISTS btree_gist")
-
+    
     # Add new booking_period column as DATERANGE
     op.add_column("booking", sa.Column("booking_period", postgresql.DATERANGE(), nullable=True))
 
@@ -49,10 +49,10 @@ def upgrade() -> None:
     # Create GIST index to prevent overlapping bookings for the same apartment
     # Using explicit SQL to specify operator classes (int4_ops for integer, range_ops for daterange)
     op.execute(
-        """
+          """
         CREATE INDEX ix_booking_no_overlap
         ON booking
-        USING gist (apartment_id int4_ops, booking_period range_ops)
+        USING gist (apartment_id, booking_period)
         """
     )
 

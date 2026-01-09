@@ -39,11 +39,12 @@ cp .env.example .env
 # Отредактируйте .env при необходимости
 
 # Запустите PostgreSQL (если не используете Docker)
-docker run --name posutochka_postgres \
+docker run --name containerpostgres \
     -e POSTGRES_PASSWORD=123456 \
     -e POSTGRES_DB=posutochka \
-    -d -p 5432:5432 postgres:16
-
+    -d -p 5433:5432 postgis/postgis:16-3.4
+docker volume ls
+docker volume rm $(docker volume ls -q)
 # Примените миграции базы данных
 alembic upgrade head
 
@@ -139,6 +140,7 @@ Please download all logs and data related about the issue to this repository, ma
 ```bash
 # Пример команды для установки расширения PostGIS в Docker
 docker exec -it containerpostgres psql -U postgres -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+CREATE EXTENSION IF NOT EXISTS btree_gist;
 ```
 _____________________
 

@@ -25,7 +25,7 @@ class TestBalanceEndpoints:
     #     }
     #     response = client.post("/balances/", json=data)
     #     assert response.status_code == 201
-    #     assert response.json()["amount"] == sample_balance_data["amount"]
+    #     assert response.json()["current_balance"] == sample_balance_data["current_balance"]
     #     assert response.json()["booking_id"] == created_booking.id
     def test_create_balance(
         self,
@@ -40,7 +40,7 @@ class TestBalanceEndpoints:
         response = client.post("/balances/", json=data)
 
         assert response.status_code == 201
-        assert Decimal(response.json()["amount"]) == Decimal(sample_balance_data["amount"])
+        assert Decimal(response.json()["current_balance"]) == Decimal(sample_balance_data["current_balance"])
         assert "id" in response.json()
 
     def test_get_balances(
@@ -52,7 +52,7 @@ class TestBalanceEndpoints:
     ) -> None:
         """Test retrieving all balances."""
         balance = Balance(
-            amount=sample_balance_data["amount"],
+            current_balance=sample_balance_data["current_balance"],
             user_id=created_user.id,
         )
         db_session.add(balance)
@@ -71,7 +71,7 @@ class TestBalanceEndpoints:
     ) -> None:
         """Test retrieving a specific balance by ID."""
         balance = Balance(
-            amount=sample_balance_data["amount"],
+            current_balance=sample_balance_data["current_balance"],
             user_id=created_user.id,
         )
         db_session.add(balance)
@@ -81,7 +81,7 @@ class TestBalanceEndpoints:
         response = client.get(f"/balances/{balance.id}")
         assert response.status_code == 200
         assert response.json()["id"] == balance.id
-        assert Decimal(response.json()["amount"]) == Decimal(sample_balance_data["amount"])
+        assert Decimal(response.json()["current_balance"]) == Decimal(sample_balance_data["current_balance"])
 
     def test_get_balance_not_found(self, client: TestClient) -> None:
         """Test retrieving a non-existent balance."""
@@ -97,17 +97,17 @@ class TestBalanceEndpoints:
     ) -> None:
         """Test updating a balance."""
         balance = Balance(
-            amount=sample_balance_data["amount"],
+            current_balance=sample_balance_data["current_balance"],
             user_id=created_user.id,
         )
         db_session.add(balance)
         db_session.commit()
         db_session.refresh(balance)
 
-        update_data = {"amount": 500.0}
+        update_data = {"current_balance": 500.0}
         response = client.patch(f"/balances/{balance.id}", json=update_data)
         assert response.status_code == 200
-        assert Decimal(response.json()["amount"]) == 500.0
+        assert Decimal(response.json()["current_balance"]) == 500.0
 
     def test_delete_balance(
         self,
@@ -118,7 +118,7 @@ class TestBalanceEndpoints:
     ) -> None:
         """Test deleting a balance."""
         balance = Balance(
-            amount=sample_balance_data["amount"],
+            current_balance=sample_balance_data["current_balance"],
             user_id=created_user.id,
         )
         db_session.add(balance)
@@ -141,7 +141,7 @@ class TestBalanceEndpoints:
     ) -> None:
         """Test filtering balances by user_id."""
         balance = Balance(
-            amount=sample_balance_data["amount"],
+            current_balance=sample_balance_data["current_balance"],
             user_id=created_user.id,
         )
         db_session.add(balance)

@@ -26,7 +26,7 @@ class Balance(Base):
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
     # Сумма транзакции.
     # precision=12 позволяет хранить миллиарды, scale=2 — копейки
-    amount: Mapped[Decimal] = mapped_column(
+    current_balance: Mapped[Decimal] = mapped_column(
         Numeric(precision=12, scale=2), server_default="0.00", nullable=False
     )
 

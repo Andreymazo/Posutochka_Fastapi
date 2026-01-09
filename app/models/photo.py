@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import ForeignKey, Integer, String, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -17,7 +17,7 @@ class Photo(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     apartment_id: Mapped[int] = mapped_column(ForeignKey("apartment.id"), nullable=False)
     url: Mapped[str] = mapped_column(String(255), nullable=False)
-
+    is_main: Mapped[bool] = mapped_column(Boolean, server_default="false", nullable=False)
     # Relationships
     apartment: Mapped["Apartment"] = relationship(back_populates="photos")
 

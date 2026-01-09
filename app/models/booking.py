@@ -1,11 +1,11 @@
 # from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
-
+from sqlalchemy import Index 
 from sqlalchemy import Enum, ForeignKey, Integer, Numeric
 from sqlalchemy.dialects.postgresql import DATERANGE
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
+from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from app.models.base import Base
 
 if TYPE_CHECKING:
@@ -69,6 +69,14 @@ class Booking(Base):
     # NOTE: GIST index is created via Alembic migration (not here) because it requires
     # explicit operator classes (int4_ops, range_ops) which aren't supported by SQLAlchemy Index
 
+    __table_args__ = (
+        ExcludeConstraint(
+            ("apartment_id", "="),
+            ("booking_period", "&&"),
+            name="exclude_overlapping_bookings",
+            using="gist",
+        ),
+    )
     def __repr__(self) -> str:
         return (
             f"Booking(id={self.id}, apartment_id={self.apartment_id}, "
