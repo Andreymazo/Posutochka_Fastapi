@@ -333,7 +333,7 @@ def created_booking(
 def sample_balance_data() -> dict[str, Any]:
     """Sample balance data for testing."""
     return {
-        "amount": 250.0,
+        "current_balance": 250.0,
     }
 
 
@@ -370,7 +370,7 @@ def created_balance(
     """Create and return a balance in the database."""
     balance = Balance(
         user_id=created_user.id,
-        amount=sample_balance_data["amount"],
+        current_balance=sample_balance_data["current_balance"],
     )
     db_session.add(balance)
     db_session.commit()

@@ -34,7 +34,7 @@ def create_balance(balance_data: BalanceCreate, db: Session = Depends(get_db)) -
     """Create a new balance."""
     balance = Balance(
         user_id=balance_data.user_id,
-        amount=balance_data.amount,
+        current_balance=balance_data.current_balance,
     )
     db.add(balance)
     db.commit()

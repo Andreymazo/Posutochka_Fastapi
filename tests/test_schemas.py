@@ -274,34 +274,34 @@ class TestBalanceSchemas:
     def test_balance_create_valid(self) -> None:
         """Test creating a valid balance."""
         balance = BalanceCreate(
-            amount=250.0,
+            current_balance=250.0,
             user_id=1,  # Теперь это обязательное поле вместо booking_i
         )
-        assert balance.amount == 250.0
+        assert balance.current_balance== 250.0
         assert balance.user_id == 1
 
-    def test_balance_create_negative_amount(self) -> None:
+    def test_balance_create_negative_current_balance(self) -> None:
         """Test that negative amount raises validation error."""
         with pytest.raises(ValidationError) as exc_info:
             BalanceCreate(
-                amount=-100.0,
+                current_balance=-100.0,
                 user_id=1,
             )
-        assert "amount" in str(exc_info.value).lower()
+        assert "current_balance" in str(exc_info.value).lower()
 
-    def test_balance_create_zero_amount(self) -> None:
-        """Test that zero amount raises validation error."""
+    def test_balance_create_zero_current_balancet(self) -> None:
+        """Test that zero current_balance raises validation error."""
         with pytest.raises(ValidationError) as exc_info:
             BalanceCreate(
-                amount=0,
+                current_balance=0,
                 user_id=1,
             )
-        assert "amount" in str(exc_info.value).lower()
+        assert "current_balance" in str(exc_info.value).lower()
 
     def test_balance_update_partial(self) -> None:
-        """Test partial balance update."""
-        update = BalanceUpdate(amount=500.0)
-        assert update.amount == 500.0
+        """Test partial current_balance update."""
+        update = BalanceUpdate(current_balance=500.0)
+        assert update.current_balance == 500.0
 
 
 class TestReviewSchemas:
