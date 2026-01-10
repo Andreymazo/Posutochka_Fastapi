@@ -1,3 +1,5 @@
+from datetime import date
+from sqlalchemy.dialects.postgresql import Range
 from typing import Any
 from collections.abc import AsyncGenerator
 import os
@@ -11,7 +13,7 @@ from app.models.base import Base
 from app.database import get_async_db
 from app.main import app 
 # Важно: импортируем модели, чтобы Base их "увидел"
-from app.models import Apartment, Booking, Landlord, Client, User, ApartmentAvailability
+from app.models import Apartment, Booking, Landlord, Client, User, ApartmentAvailability, Balance
 import uuid
 
 # Используем psycopg3 для асинхронного PostgreSQL
@@ -73,6 +75,20 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides.clear()
 
 
+import uuid
+
+@pytest.fixture
+def sample_user_data() -> dict[str, Any]:
+    """Генерирует уникальные данные для тестирования родительской сущности User."""
+    unique_suffix = uuid.uuid4().hex[:6]
+    return {
+        "email": f"user_{unique_suffix}@example.com",
+        "phone_number": f"+7999{uuid.uuid4().int}"[:12], # Уникальный телефон
+        "password_hash": "secure_hash_2026",
+        "telegram_username": f"tg_user_{unique_suffix}",
+    }
+
+
 @pytest.fixture
 def sample_user_landlord_data() -> dict[str, Any]:
     # Генерируем случайный префикс
@@ -111,6 +127,65 @@ async def created_landlord_user(db_session: AsyncSession, sample_user_landlord_d
     await db_session.commit()
     await db_session.refresh(user)
     return user
+
+@pytest.fixture
+def sample_payment_data() -> dict[str, Any]:
+    """Данные для платежа или транзакции."""
+    return {
+        "amount": 250.0,
+        "payment_status": "pending",
+        "payment_method": "card"
+    }
+
+@pytest.fixture
+def sample_balance_data() -> dict[str, Any]:
+    """Данные для инициализации баланса (используются в created_balance)."""
+    return {
+        "current_balance": 1000.0
+    }
+
+@pytest_asyncio.fixture(loop_scope="function")
+async def created_balance(
+    db_session: AsyncSession, 
+    created_landlord_user: User, 
+    sample_balance_data: dict[str, Any]
+) -> Balance:
+    """Асинхронное создание баланса в БД."""
+    balance = Balance(
+        user_id=created_landlord_user.id,
+        current_balance=sample_balance_data["current_balance"],
+    )
+    db_session.add(balance)
+    await db_session.commit()
+    await db_session.refresh(balance)
+    return balance
+
+
+
+@pytest_asyncio.fixture(loop_scope="function")
+async def created_booking(
+    db_session: AsyncSession,
+    created_landlord: Landlord,
+    created_client: Client,
+    created_apartment: Apartment,
+) -> Booking:
+    """Создает тестовое бронирование для использования в тестах транзакций/платежей."""
+    # Используем актуальные даты 2026 года
+    booking_period = Range(date(2026, 2, 1), date(2026, 2, 10), bounds="[)")
+    
+    booking = Booking(
+        booking_period=booking_period,
+        cost=1000.0,
+        booking_status="confirmed",
+        landlord_id=created_landlord.id,
+        client_id=created_client.id,
+        apartment_id=created_apartment.id,
+    )
+    
+    db_session.add(booking)
+    await db_session.commit()
+    await db_session.refresh(booking)
+    return booking
 
 @pytest_asyncio.fixture(loop_scope="function")
 async def created_landlord(db_session: AsyncSession, created_landlord_user: User) -> Landlord:
