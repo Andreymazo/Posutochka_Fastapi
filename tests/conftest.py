@@ -1,378 +1,254 @@
-"""Shared test fixtures and configuration."""
-
-import os
-from collections.abc import Generator
-from contextlib import asynccontextmanager
 from typing import Any
-
+from collections.abc import AsyncGenerator
+import os
+import asyncio
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy import text
+from app.models.base import Base  
+from app.database import get_async_db
+from app.main import app 
+# Важно: импортируем модели, чтобы Base их "увидел"
+from app.models import Apartment, Booking, Landlord, Client, User, ApartmentAvailability
+import uuid
 
-from app.database import get_db
-from app.models import Apartment, Balance, Base, Booking, Client, Landlord, User
-from app.routers import (
-    apartments,
-    balances,
-    bookings,
-    clients,
-    landlords,
-    owners,
-    payments,
-    photos,
-    reviews,
-    transactions,
-    users,
+# Используем psycopg3 для асинхронного PostgreSQL
+DATABASE_URL = "postgresql+psycopg://postgres:123456@localhost:5433/posutochka"
+
+engine = create_async_engine(DATABASE_URL, echo=False)
+AsyncTestingSessionLocal = async_sessionmaker(
+    bind=engine, 
+    class_=AsyncSession, 
+    expire_on_commit=False
 )
+@pytest.fixture(scope="session")
+def event_loop():
+    """Создает экземпляр цикла событий для всей сессии тестов."""
+    policy = asyncio.get_event_loop_policy()
+    loop = policy.new_event_loop()
+    yield loop
+    loop.close()
 
-# Use PostgreSQL from environment variable, fallback to SQLite for local testing
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///:memory:")
+@pytest_asyncio.fixture(scope="session", autouse=True, loop_scope="session")
+async def setup_db():
+    """Создание таблиц и расширений PostgreSQL один раз на всю сессию тестов."""
+    async with engine.begin() as conn:
+        # Необходимые расширения для ваших типов данных
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gist;"))
+        
+        # Очистка и создание таблиц
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    await engine.dispose()
 
-# Configure engine based on database type
-if DATABASE_URL.startswith("sqlite"):
-    test_engine = create_engine(
-        DATABASE_URL,
-        connect_args={"check_same_thread": False},
-    )
-else:
-    test_engine = create_engine(DATABASE_URL)
-
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
-
-
-def create_test_app() -> FastAPI:
-    """Create a test FastAPI application without database connection in lifespan."""
-
-    @asynccontextmanager
-    async def test_lifespan(_app: FastAPI):
-        """Test lifespan that creates/drops tables."""
-        Base.metadata.create_all(bind=test_engine)
-        yield
-
-    test_app = FastAPI(
-        title="Posutochka API Test",
-        description="API for apartment rental service",
-        version="1.0.0",
-        lifespan=test_lifespan,
-    )
-
-    # Include all routers
-    test_app.include_router(users.router)
-    test_app.include_router(landlords.router)
-    test_app.include_router(clients.router)
-    test_app.include_router(apartments.router)
-    test_app.include_router(photos.router)
-    test_app.include_router(bookings.router)
-    test_app.include_router(payments.router)
-    test_app.include_router(balances.router)
-    test_app.include_router(reviews.router)
-    test_app.include_router(owners.router)
-    test_app.include_router(transactions.router)
-
-    @test_app.get("/")
-    def root():
-        """Root endpoint."""
-        return {"message": "Welcome to Posutochka API"}
-
-    @test_app.get("/health")
-    def health_check():
-        """Health check endpoint."""
-        return {"status": "healthy"}
-
-    return test_app
-
-
-@pytest.fixture
-def db_session() -> Generator[Session, None, None]:
-    """Create a fresh database session for each test."""
-    # Create all tables
-    Base.metadata.create_all(bind=test_engine)
-
-    session = TestingSessionLocal()
-    try:
+@pytest_asyncio.fixture
+async def db_session() -> AsyncGenerator[AsyncSession, None]:
+    """Фикстура для прямого взаимодействия с БД в тестах."""
+    async with AsyncTestingSessionLocal() as session:
         yield session
-    finally:
-        session.close()
-        # Drop all tables after the test
-        Base.metadata.drop_all(bind=test_engine)
+        # Откатываем транзакцию, чтобы изменения в БД не влияли на другие тесты
+        await session.rollback()
 
+@pytest_asyncio.fixture
+async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+    """Асинхронный клиент FastAPI с подменой сессии БД."""
+    
+    async def _override_get_async_db():
+        yield db_session
 
-@pytest.fixture
-def client(db_session: Session) -> Generator[TestClient, None, None]:
-    """Create a test client with database dependency override."""
-    test_app = create_test_app()
-
-    def override_get_db() -> Generator[Session, None, None]:
-        try:
-            yield db_session
-        finally:
-            pass
-
-    test_app.dependency_overrides[get_db] = override_get_db
-
-    with TestClient(test_app) as test_client:
-        yield test_client
-
-    test_app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def sample_user_data() -> dict[str, Any]:
-    """Sample user data for testing (deprecated - use sample_user_landlord_data or sample_user_client_data)."""
-    return {
-        "email": "test@example.com",
-        "phone_number": "+1234567890",
-        "password_hash": "securepassword123",
-        "telegram_username": "@testuser",
-    }
+    # Подменяем зависимость, которую используют роутеры
+    app.dependency_overrides[get_async_db] = _override_get_async_db
+    
+    async with AsyncClient(
+        transport=ASGITransport(app=app), 
+        base_url="http://test"
+    ) as ac:
+        yield ac
+    
+    # Сбрасываем подмены после теста
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
 def sample_user_landlord_data() -> dict[str, Any]:
-    """Sample user data for landlord testing."""
+    # Генерируем случайный префикс
+    uid = uuid.uuid4().hex[:6]
     return {
-        "email": "landlord@example.com",
-        "phone_number": "+1234567890",
-        "password_hash": "landlordpassword123",
-        "telegram_username": "@landlorduser",
+        "email": f"landlord_{uid}@example.com",
+        "phone_number": f"+1{uuid.uuid4().int}"[:12],
+        "password_hash": "landlord_pass",
+        "telegram_username": f"@landlord_{uid}",
     }
-
 
 @pytest.fixture
 def sample_user_client_data() -> dict[str, Any]:
-    """Sample user data for client testing."""
+    uid = uuid.uuid4().hex[:6]
     return {
-        "email": "client@example.com",
-        "phone_number": "+0987654321",
-        "password_hash": "clientpassword123",
-        "telegram_username": "@clientuser",
+        "email": f"client_{uid}@example.com",
+        "phone_number": f"+2{uuid.uuid4().int}"[:12],
+        "password_hash": "client_pass",
+        "telegram_username": f"@client_{uid}",
+    }
+@pytest.fixture
+def sample_user_owner_data() -> dict[str, Any]:
+    return {
+        "email": "owner@example.com",
+        "phone_number": "+3333333333",
+        "password_hash": "owner_pass",
     }
 
+# --- CREATION FIXTURES (Асинхронное создание объектов) ---
 
-@pytest.fixture
-def sample_apartment_data(created_landlord: Landlord) -> dict[str, Any]:
-    """Sample apartment data for testing."""
-    return {
-        "name": "Cozy Studio",
-        "description": "A beautiful studio apartment in the city center",
-        "price_per_night": 50.0,
-        "address": "123 Main Street",
-        "location": "POINT (37.6173 55.7558)",  # Moscow coordinates
-        "landlord_id": created_landlord.id,
-    }
-
-
-# "location": Point([37.6173, 55.7558])
-# "location": {"type": "Geography", "coordinates": [37.6173, 55.7558]}#,"ctx":{"class":"Geography"}  # Используйте GeoJSON
-
-
-@pytest.fixture
-def sample_landlord_data() -> dict[str, Any]:
-    """Sample landlord data for testing."""
-    return {
-        "first_name": "John",
-        "last_name": "Doe",
-    }
-
-
-@pytest.fixture
-def sample_client_data() -> dict[str, Any]:
-    """Sample client data for testing."""
-    return {
-        "first_name": "Jane",
-        "last_name": "Smith",
-    }
-
-
-@pytest.fixture
-def sample_booking_data() -> dict[str, Any]:
-    """Sample booking data for testing."""
-    return {
-        "start_date": "2024-01-15",
-        "end_date": "2024-01-20",
-        "cost": 250.0,
-        "booking_status": "pending",
-    }
-
-
-@pytest.fixture
-def sample_payment_data() -> dict[str, Any]:
-    """Sample payment data for testing."""
-    return {
-        "amount": 250.0,
-        "payment_status": "pending",
-    }
-
-
-@pytest.fixture
-def sample_photo_data() -> dict[str, Any]:
-    """Sample photo data for testing."""
-    return {
-        "url": "https://example.com/photos/apartment1.jpg",
-    }
-
-
-@pytest.fixture
-def created_user(db_session: Session, sample_user_landlord_data: dict[str, Any]) -> User:
-    """Create and return a user in the database (for landlord use)."""
-    user = User(
-        email=sample_user_landlord_data["email"],
-        phone_number=sample_user_landlord_data["phone_number"],
-        password_hash=sample_user_landlord_data["password_hash"],
-        telegram_username=sample_user_landlord_data["telegram_username"],
-    )
+@pytest_asyncio.fixture(loop_scope="function")
+async def created_landlord_user(db_session: AsyncSession, sample_user_landlord_data: dict[str, Any]) -> User:
+    """Создает пользователя специально для роли Арендодателя."""
+    user = User(**sample_user_landlord_data)
     db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
+    await db_session.commit()
+    await db_session.refresh(user)
     return user
 
+@pytest_asyncio.fixture(loop_scope="function")
+async def created_landlord(db_session: AsyncSession, created_landlord_user: User) -> Landlord:
+    """Создает Арендодателя (связан с User 1)."""
+    landlord = Landlord(
+        user_id=created_landlord_user.id,
+        first_name="Иван",
+        last_name="Хозяев"
+    )
+    db_session.add(landlord)
+    await db_session.commit()
+    await db_session.refresh(landlord)
+    return landlord
 
-@pytest.fixture
-def created_apartment(
-    db_session: Session, created_landlord: Landlord, sample_apartment_data: dict[str, Any]
-) -> Apartment:
-    """Create and return an apartment in the database."""
+@pytest_asyncio.fixture(loop_scope="function")
+async def created_client_user(db_session: AsyncSession, sample_user_client_data: dict[str, Any]) -> User:
+    """Создает пользователя специально для роли Клиента."""
+    user = User(**sample_user_client_data)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+@pytest_asyncio.fixture(loop_scope="function")
+async def created_client(db_session: AsyncSession, created_client_user: User) -> Client:
+    """Создает Клиента (связан с User 2)."""
+    client = Client(
+        user_id=created_client_user.id,
+        first_name="Петр",
+        last_name="Гость"
+    )
+    db_session.add(client)
+    await db_session.commit()
+    await db_session.refresh(client)
+    return client
+
+@pytest_asyncio.fixture(loop_scope="function")
+async def created_owner_user(db_session: AsyncSession, sample_user_owner_data: dict[str, Any]) -> User:
+    """Создает пользователя специально для роли Владельца (Owner)."""
+    user = User(**sample_user_owner_data)
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+@pytest_asyncio.fixture(loop_scope="function")
+async def created_apartment(db_session: AsyncSession, created_landlord: Landlord) -> Apartment:
+    """Создает апартаменты (требует созданного арендодателя)."""
     apartment = Apartment(
-        name=sample_apartment_data["name"],
-        description=sample_apartment_data["description"],
-        price_per_night=sample_apartment_data["price_per_night"],
-        address=sample_apartment_data["address"],
-        location=sample_apartment_data["location"],
+        name="Cozy Studio",
+        description="A beautiful studio",
+        price_per_night=50.0,
+        address="123 Main Street",
+        location="POINT(37.6173 55.7558)", # WKT формат для PostGIS
         landlord_id=created_landlord.id,
     )
     db_session.add(apartment)
-    db_session.commit()
-    db_session.refresh(apartment)
+    await db_session.commit()
+    await db_session.refresh(apartment)
     return apartment
+# import os
+# import asyncio
+# import pytest
+# import pytest_asyncio
+# from httpx import ASGITransport, AsyncClient
+# from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+# from sqlalchemy import text
 
+# from app.database import Base, get_async_db
+# from app.main import app  # Импортируйте ваше FastAPI приложение
+# from app.models import Base # Убедитесь, что здесь подтянуты все модели
 
-@pytest.fixture
-def created_landlord(
-    db_session: Session, created_user: User, sample_landlord_data: dict[str, Any]
-) -> Landlord:
-    """Create and return a landlord in the database."""
-    landlord = Landlord(
-        user_id=created_user.id,
-        first_name=sample_landlord_data["first_name"],
-        last_name=sample_landlord_data["last_name"],
-    )
-    db_session.add(landlord)
-    db_session.commit()
-    db_session.refresh(landlord)
-    return landlord
+# # Схема postgresql+psycopg для асинхронной работы
+# DATABASE_URL = "postgresql+psycopg://postgres:123456@localhost:5433/posutochka"
 
+# engine = create_async_engine(DATABASE_URL, echo=False)
+# AsyncTestingSessionLocal = async_sessionmaker(
+#     bind=engine, 
+#     class_=AsyncSession, 
+#     expire_on_commit=False
+# )
 
-@pytest.fixture
-def created_client_user(db_session: Session, sample_user_client_data: dict[str, Any]) -> User:
-    """Create and return a client user in the database."""
-    user = User(
-        email=sample_user_client_data["email"],
-        phone_number=sample_user_client_data["phone_number"],
-        password_hash=sample_user_client_data["password_hash"],
-        telegram_username=sample_user_client_data.get("telegram_username"),
-    )
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
-    return user
+# @pytest_asyncio.fixture(scope="session", autouse=True)
+# async def setup_db():
+#     """Инициализация таблиц перед тестами."""
+#     async with engine.begin() as conn:
+#         # Включаем экстеншены, если их нет
+#         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
+#         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gist;"))
+#         # Пересоздаем таблицы для чистоты тестов
+#         await conn.run_sync(Base.metadata.drop_all)
+#         await conn.run_sync(Base.metadata.create_all)
+#     yield
+#     await engine.dispose()
 
+# @pytest_asyncio.fixture
+# async def db_session() -> AsyncSession:
+#     """Сессия для создания данных в тестах."""
+#     async with AsyncTestingSessionLocal() as session:
+#         yield session
+#         # Очищаем данные после каждого теста для изоляции
+#         await session.rollback()
 
-@pytest.fixture
-def created_client(
-    db_session: Session, created_client_user: User, sample_client_data: dict[str, Any]
-) -> Client:
-    """Create and return a client in the database."""
-    client_obj = Client(
-        user_id=created_client_user.id,
-        first_name=sample_client_data["first_name"],
-        last_name=sample_client_data["last_name"],
-    )
-    db_session.add(client_obj)
-    db_session.commit()
-    db_session.refresh(client_obj)
-    return client_obj
+# @pytest_asyncio.fixture
+# async def client(db_session: AsyncSession) -> AsyncClient:
+#     """Асинхронный клиент с подменой зависимости БД."""
+#     async def _get_test_db():
+#         yield db_session
 
+#     app.dependency_overrides[get_async_db] = _get_test_db
+#     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+#         yield ac
+#     app.dependency_overrides.clear()
+# def create_test_app() -> FastAPI:
+#     """Создает экземпляр приложения для тестов с пустым lifespan."""
+    
+#     @asynccontextmanager
+#     async def test_lifespan(_app: FastAPI):
+#         # В тестах мы управляем БД через фикстуры pytest, 
+#         # поэтому здесь просто yield
+#         yield
 
-@pytest.fixture
-def created_booking(
-    db_session: Session,
-    created_landlord: Landlord,
-    created_client: Client,
-    created_apartment: Apartment,
-    sample_booking_data: dict[str, Any],
-) -> Booking:
-    """Create and return a booking in the database."""
-    from datetime import date
+#     test_app = FastAPI(
+#         title="Posutochka API Test",
+#         lifespan=test_lifespan,
+#     )
 
-    from sqlalchemy.dialects.postgresql import Range
+#     # Include all routers
+#     test_app.include_router(users.router)
+#     test_app.include_router(landlords.router)
+#     test_app.include_router(clients.router)
+#     test_app.include_router(apartments.router)
+#     test_app.include_router(photos.router)
+#     test_app.include_router(bookings.router)
+#     test_app.include_router(payments.router)
+#     test_app.include_router(balances.router)
+#     test_app.include_router(reviews.router)
+#     test_app.include_router(owners.router)
+#     test_app.include_router(transactions.router)
 
-    # Convert date strings to date objects
-    start_date = date.fromisoformat(sample_booking_data["start_date"])
-    end_date = date.fromisoformat(sample_booking_data["end_date"])
-
-    # Create Range object for booking_period
-    booking_period = Range(start_date, end_date, bounds="[)")
-
-    booking = Booking(
-        booking_period=booking_period,
-        cost=sample_booking_data["cost"],
-        booking_status=sample_booking_data["booking_status"],
-        landlord_id=created_landlord.id,
-        client_id=created_client.id,
-        apartment_id=created_apartment.id,
-    )
-    db_session.add(booking)
-    db_session.commit()
-    db_session.refresh(booking)
-    return booking
-
-
-@pytest.fixture
-def sample_balance_data() -> dict[str, Any]:
-    """Sample balance data for testing."""
-    return {
-        "current_balance": 250.0,
-    }
-
-
-@pytest.fixture
-def sample_review_data() -> dict[str, Any]:
-    """Sample review data for testing."""
-    return {
-        "rating": 5,
-        "review": "Great apartment, highly recommend!",
-    }
-
-
-@pytest.fixture
-def sample_owner_data() -> dict[str, Any]:
-    """Sample owner data for testing."""
-    return {
-        "amount": 100.0,
-    }
-
-
-@pytest.fixture
-def sample_transaction_data() -> dict[str, Any]:
-    """Sample transaction data for testing."""
-    return {
-        "amount": 250.0,
-        "transaction_type": "booking_payment",
-    }
-
-
-@pytest.fixture
-def created_balance(
-    db_session: Session, created_user: User, sample_balance_data: dict[str, Any]
-) -> Balance:
-    """Create and return a balance in the database."""
-    balance = Balance(
-        user_id=created_user.id,
-        current_balance=sample_balance_data["current_balance"],
-    )
-    db_session.add(balance)
-    db_session.commit()
-    db_session.refresh(balance)
-    return balance
+#     return test_app

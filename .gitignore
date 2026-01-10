@@ -3,6 +3,7 @@ tz.md
 schema_bck.py
 AI_conversation.txt
 trash/
+conftest_async.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

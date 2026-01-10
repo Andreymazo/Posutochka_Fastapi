@@ -5,9 +5,9 @@ from fastapi import HTTPException, status
 from sqlalchemy import and_, exists, or_, select
 from sqlalchemy.dialects.postgresql import Range
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-
-from app.models.apartmentavailability import ApartmentAvailability
+from sqlalchemy.orm import selectinload, joinedload
+from app.models import Apartment, ApartmentAvailability
+# from app.models.apartmentavailability import ApartmentAvailability
 from app.models.booking import Booking
 from app.schemas.booking import BookingCreate, BookingUpdate
 
@@ -35,28 +35,33 @@ class BookingService:
         """
         # Create Range object from start_date and end_date
         booking_period = Range(booking_data.start_date, booking_data.end_date, bounds="[)")
-
-        # 1. Build query to check if dates are available
-        busy_query = select(
-            exists().where(
-                or_(
-                    # Check among active bookings
-                    and_(
-                        Booking.apartment_id == booking_data.apartment_id,
-                        Booking.booking_period.overlaps(booking_period),
-                        Booking.booking_status != "cancelled",
-                    ),
-                    # Check among landlord blocks (where booking is forbidden)
-                    and_(
-                        ApartmentAvailability.apartment_id == booking_data.apartment_id,
-                        ApartmentAvailability.blocked_period.overlaps(booking_period),
-                        ApartmentAvailability.is_blocked == True,  # noqa: E712
-                    ),
-                )
+         # 1. Формируем два условия проверки занятости
+        # Условие А: Есть ли перекрывающиеся активные брони
+        booking_exists = select(Booking.id).where(
+            and_(
+                Booking.apartment_id == booking_data.apartment_id,
+                Booking.booking_period.overlaps(booking_period),
+                Booking.booking_status != "cancelled"
             )
         )
 
-        # 2. Execute the check
+        # Условие Б: Есть ли перекрывающиеся блокировки от владельца
+        availability_exists = select(ApartmentAvailability.id).where(
+            and_(
+                ApartmentAvailability.apartment_id == booking_data.apartment_id,
+                ApartmentAvailability.blocked_period.overlaps(booking_period),
+                ApartmentAvailability.is_blocked == True
+            )
+        )
+
+        # Объединяем их через union_all и оборачиваем в exists()
+        # Это исключает Cartesian Product и гарантирует правильный SQL
+        busy_query = select(exists(booking_exists.union_all(availability_exists)))
+
+        # 2. Выполняем проверку
+        result = await db.execute(busy_query)
+        is_busy = result.scalar()
+        
         result = await db.execute(busy_query)
         is_busy = result.scalar()
 
@@ -88,7 +93,6 @@ class BookingService:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Минимальный срок проживания для выбранных дат: {rule.min_stay_days} дней",
                 )
-
         # 4. If available - create the booking object
         new_booking = Booking(
             booking_period=booking_period,
@@ -101,79 +105,18 @@ class BookingService:
 
         db.add(new_booking)
         await db.commit()
-        await db.refresh(new_booking, ["payments"])
-        return new_booking
-# _______________________________________
-# ======================================================== warnings summary ========================================================
-# tests/test_bookings.py::TestBookingDateRange::test_create_booking_with_daterange
-#   sys:1: SAWarning: SELECT statement has a cartesian product between FROM element(s) "apartment_availability" and FROM element "booking".  Apply join condition(s) between each element to resolve.
-
-# -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-# Думаю…
-# Предупреждение
-# Cartesian Product возникает из-за того, что в одном запросе select вы используете обе модели (Booking и ApartmentAvailability) без условия JOIN. SQLAlchemy видит это и предупреждает, что база данных пытается перемножить все строки одной таблицы на все строки другой, что фатально для производительности.
-# В 2026 году для решения этой проблемы в асинхронном FastAPI приложении лучше всего разделить проверку на два независимых подзапроса.
-# Вот исправленный код для app/services/booking_service.py, который уберет это предупреждение:
-# Исправленный create_new_booking
-# python
-
-# from sqlalchemy import select, exists, or_, and_
-# # ... остальные импорты
-
-# class BookingService:
-#     @staticmethod
-#     async def create_new_booking(db: AsyncSession, booking_data: BookingCreate, client_id: int):
         
-#         # 1. Проверка пересечения с существующими бронями
-#         booking_conflict = exists().where(
-#             and_(
-#                 Booking.apartment_id == booking_data.apartment_id,
-#                 Booking.booking_period.overlaps(booking_data.booking_period),
-#                 Booking.booking_status != "cancelled"
-#             )
-#         )
-
-#         # 2. Проверка пересечения с блокировками арендодателя
-#         availability_conflict = exists().where(
-#             and_(
-#                 ApartmentAvailability.apartment_id == booking_data.apartment_id,
-#                 ApartmentAvailability.blocked_period.overlaps(booking_data.booking_period),
-#                 ApartmentAvailability.is_blocked == True
-#             )
-#         )
-
-#         # 3. Объединяем их в один запрос, не создавая Cartesian Product
-#         # Используем select(exists(...).or_(exists(...))) или два отдельных scalar
-#         query = select(or_(booking_conflict, availability_conflict))
-        
-#         is_busy = await db.scalar(query)
-
-#         if is_busy:
-#             raise HTTPException(
-#                 status_code=400, 
-#                 detail="Выбранные даты уже заняты или недоступны"
-#             )
-
-#         # ... дальше создание брони ...
-#         new_booking = Booking(
-#             **booking_data.model_dump(exclude={"booking_period"}), # Исключаем, если в схеме это не Range
-#             booking_period=booking_data.booking_period,
-#             client_id=client_id,
-#             booking_status="pending"
-#         )
-#         # ...
-
-# Используйте код с осторожностью.
-# Почему это решает проблему:
-
-#     Независимые exists: Когда мы оборачиваем каждую проверку в свой exists(), SQLAlchemy генерирует два подзапроса. Они не смешиваются в основном блоке FROM, и декартово произведение не возникает.
-#     Безопасность: Мы проверяем is_blocked == True, что позволяет арендодателю менять цены через ApartmentAvailability, не блокируя при этом возможность бронирования (если is_blocked=False).
-
-# Что проверить в тестах:
-# Если предупреждение остается, проверьте, нет ли в тесте test_create_booking_with_daterange момента, где вы случайно делаете db.execute(select(Booking, ApartmentAvailability)). Запрос всегда должен быть направлен на конкретную модель или через четкий join.
-# После замены на предложенную структуру с or_(booking_conflict, availability_conflict), предупреждение SAWarning исчезнет. [1, 2]
-# _______________________________________
-
+        # Вместо refresh загружаем всё необходимое одним чистым запросом
+        final_query = (
+            select(Booking)
+            .where(Booking.id == new_booking.id)
+            .options(
+                selectinload(Booking.payments),
+                joinedload(Booking.apartment).selectinload(Apartment.availability_rules)
+            )
+        )
+        result = await db.execute(final_query)
+        return result.unique().scalar_one()
 
 
     @staticmethod
@@ -194,10 +137,19 @@ class BookingService:
         query = (
             select(Booking)
             .where(Booking.id == booking_id)
-            .options(selectinload(Booking.payments))
+            .options(
+                selectinload(Booking.payments),
+                # selectinload(Booking.apartment)  # Явно подгружаем апартамент
+                # Явно загружаем апартамент И его правила, чтобы избежать Cartesian Product
+                # selectinload(Booking.apartment).selectinload(Apartment.availability_rules)
+                # Используем joinedload (JOIN), чтобы избежать Cartesian Product
+                joinedload(Booking.apartment).selectinload(Apartment.availability_rules)
+                )
         )
         result = await db.execute(query)
-        booking = result.scalar_one_or_none()
+        # БЕЗ ЭТОГО МЕТОДА БУДЕТ ОШИБКА ИЛИ ПРЕДУПРЕЖДЕНИЕ
+        booking = result.unique().scalar_one_or_none() 
+        # booking = result.scalar_one_or_none()
 
         if not booking:
             raise HTTPException(
@@ -230,7 +182,8 @@ class BookingService:
             List of bookings
         """
         # 1. Базовый запрос с подгрузкой платежей
-        query = select(Booking).options(selectinload(Booking.payments))
+        query = select(Booking).options(selectinload(Booking.payments),
+                selectinload(Booking.apartment).selectinload(Apartment.availability_rules))
         
         # 2. Фильтры
         if landlord_id:
