@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
+from app.database import get_async_db
 from app.models.review import Review
 from app.schemas.review import ReviewCreate, ReviewRead, ReviewUpdate
 
@@ -9,37 +10,40 @@ router = APIRouter(prefix="/reviews", tags=["reviews"])
 
 
 @router.get("/", response_model=list[ReviewRead])
-def get_reviews(
+async def get_reviews(
     booking_id: int | None = None,
     landlord_id: int | None = None,
     client_id: int | None = None,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
 ) -> list[Review]:
     """Get all reviews with optional filters and pagination."""
-    query = db.query(Review)
+    query = select(Review)
     if booking_id:
         query = query.filter(Review.booking_id == booking_id)
     if landlord_id:
         query = query.filter(Review.landlord_id == landlord_id)
     if client_id:
         query = query.filter(Review.client_id == client_id)
-    reviews = query.offset(skip).limit(limit).all()
-    return reviews
+    query = query.offset(skip).limit(limit)
+    result = await db.execute(query)
+    return result.scalars().all()
 
 
 @router.get("/{review_id}", response_model=ReviewRead)
-def get_review(review_id: int, db: Session = Depends(get_db)) -> Review:
+async def get_review(review_id: int, db: AsyncSession = Depends(get_async_db)) -> Review:
     """Get a specific review by ID."""
-    review = db.query(Review).filter(Review.id == review_id).first()
+    query = select(Review).filter(Review.id == review_id)
+    result = await db.execute(query)
+    review = result.scalar_one_or_none()
     if not review:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
     return review
 
 
 @router.post("/", response_model=ReviewRead, status_code=status.HTTP_201_CREATED)
-def create_review(review_data: ReviewCreate, db: Session = Depends(get_db)) -> Review:
+async def create_review(review_data: ReviewCreate, db: AsyncSession = Depends(get_async_db)) -> Review:
     """Create a new review."""
     review = Review(
         booking_id=review_data.booking_id,
@@ -50,17 +54,19 @@ def create_review(review_data: ReviewCreate, db: Session = Depends(get_db)) -> R
         author_role=review_data.author_role,
     )
     db.add(review)
-    db.commit()
-    db.refresh(review)
+    await db.commit()
+    await db.refresh(review)
     return review
 
 
 @router.patch("/{review_id}", response_model=ReviewRead)
-def update_review(
-    review_id: int, review_data: ReviewUpdate, db: Session = Depends(get_db)
+async def update_review(
+    review_id: int, review_data: ReviewUpdate, db: AsyncSession = Depends(get_async_db)
 ) -> Review:
     """Update a review."""
-    review = db.query(Review).filter(Review.id == review_id).first()
+    query = select(Review).filter(Review.id == review_id)
+    result = await db.execute(query)
+    review = result.scalar_one_or_none()
     if not review:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
 
@@ -69,17 +75,19 @@ def update_review(
     for field, value in update_data.items():
         setattr(review, field, value)
 
-    db.commit()
-    db.refresh(review)
+    await db.commit()
+    await db.refresh(review)
     return review
 
 
 @router.delete("/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_review(review_id: int, db: Session = Depends(get_db)) -> None:
+async def delete_review(review_id: int, db: AsyncSession = Depends(get_async_db)) -> None:
     """Delete a review."""
-    review = db.query(Review).filter(Review.id == review_id).first()
+    query = select(Review).filter(Review.id == review_id)
+    result = await db.execute(query)
+    review = result.scalar_one_or_none()
     if not review:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
 
-    db.delete(review)
-    db.commit()
+    await db.delete(review)
+    await db.commit()
