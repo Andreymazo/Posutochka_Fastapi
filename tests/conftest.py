@@ -49,32 +49,72 @@ async def setup_db():
     yield
     await engine.dispose()
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function") # Выполняется для каждого теста
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
-    """Фикстура для прямого взаимодействия с БД в тестах."""
-    async with AsyncTestingSessionLocal() as session:
-        yield session
-        # Откатываем транзакцию, чтобы изменения в БД не влияли на другие тесты
-        await session.rollback()
+    """Создает сессию в транзакции, которая откатывается после теста."""
+    async with engine.connect() as connection:
+        # Начинаем внешнюю транзакцию
+        transaction = await connection.begin()
+        # Создаем сессию, привязанную к этому соединению
+        async with AsyncSession(bind=connection, expire_on_commit=False) as session:
+            
+            # ВАЖНО: Подменяем зависимость в FastAPI, чтобы роутеры использовали эту же сессию
+            app.dependency_overrides[get_async_db] = lambda: session
+            
+            yield session
+            
+            # Закрываем сессию
+            await session.close()
+        
+        # Откатываем транзакцию — все изменения (INSERT/UPDATE), 
+        # сделанные и в тесте, и внутри роутеров API, исчезнут.
+        await transaction.rollback()
+        
+    # Чистим переопределения после теста
+    app.dependency_overrides.clear()
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
-    """Асинхронный клиент FastAPI с подменой сессии БД."""
-
-    async def _override_get_async_db():
-        yield db_session
-
-    # Подменяем зависимость, которую используют роутеры
-    app.dependency_overrides[get_async_db] = _override_get_async_db
-
+    """
+    Асинхронный клиент FastAPI. 
+    Логика подмены БД уже реализована в фикстуре db_session, 
+    здесь мы просто создаем сам клиент.
+    """
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test"
     ) as ac:
         yield ac
+    # app.dependency_overrides.clear() вызовется автоматически в db_session
 
-    # Сбрасываем подмены после теста
-    app.dependency_overrides.clear()
+# @pytest_asyncio.fixture
+# async def db_session() -> AsyncGenerator[AsyncSession, None]:
+#     """Фикстура для прямого взаимодействия с БД в тестах."""
+#     async with AsyncTestingSessionLocal() as session:
+#         yield session
+#         # Откатываем транзакцию, чтобы изменения в БД не влияли на другие тесты
+#         await session.rollback()
+
+
+
+# @pytest_asyncio.fixture
+# async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+#     """Асинхронный клиент FastAPI с подменой сессии БД."""
+
+#     async def _override_get_async_db():
+#         yield db_session
+
+#     # Подменяем зависимость, которую используют роутеры
+#     app.dependency_overrides[get_async_db] = _override_get_async_db
+
+#     async with AsyncClient(
+#         transport=ASGITransport(app=app),
+#         base_url="http://test"
+#     ) as ac:
+#         yield ac
+
+#     # Сбрасываем подмены после теста
+#     app.dependency_overrides.clear()
 
 
 

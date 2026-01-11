@@ -50,7 +50,7 @@ class ApartmentRead(BaseModel):
     landlord_id: int  # поле для связи с арендодателем
 
     # Используем аннотацию типа для списка PhotoRead
-    photos: list[PhotoRead] = []
+    photos: list[PhotoRead] | None = []
 
     @field_validator("location", mode="before")
     @classmethod

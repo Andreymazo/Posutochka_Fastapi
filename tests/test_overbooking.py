@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Booking
 
-
 @pytest.mark.asyncio
 async def test_overbooking_logic(
     db_session: AsyncSession,
@@ -15,11 +14,7 @@ async def test_overbooking_logic(
     created_apartment: any,
     created_landlord: any
 ):
-    """
-    Тест проверяет, что база данных (GIST индекс) блокирует пересекающиеся даты.
-    """
-    # 1. Создаем ПЕРВУЮ бронь (успешную)
-    # Используем созданные фикстурами объекты для корректности связей
+    # 1. Создаем первую успешную бронь
     booking1 = Booking(
         apartment_id=created_apartment.id,
         landlord_id=created_landlord.id,
@@ -31,26 +26,74 @@ async def test_overbooking_logic(
     db_session.add(booking1)
     await db_session.commit()
 
-    # 2. Пытаемся создать ВТОРУЮ бронь на те же даты в НОВОЙ транзакции
-    # Мы используем новую транзакцию, так как предыдущая завершена commit-ом
-    conflict_booking = Booking(
-        apartment_id=created_apartment.id,
-        landlord_id=created_landlord.id,
-        client_id=created_client.id,
-        booking_period=Range(date(2026, 6, 5), date(2026, 6, 15), bounds="[]"),
-        cost=Decimal("50000.00"),
-        booking_status="confirmed"
-    )
-    db_session.add(conflict_booking)
+    # 2. Используем BEGIN NESTED (Savepoint) для проверки конфликта
+    # Это изолирует ошибку внутри этой секции
+    async with db_session.begin_nested():
+        conflict_booking = Booking(
+            apartment_id=created_apartment.id,
+            landlord_id=created_landlord.id,
+            client_id=created_client.id,
+            booking_period=Range(date(2026, 6, 5), date(2026, 6, 15), bounds="[]"),
+            cost=Decimal("50000.00"),
+            booking_status="confirmed"
+        )
+        db_session.add(conflict_booking)
+        
+        with pytest.raises(Exception) as excinfo:
+            await db_session.flush() # База выкинет ошибку здесь
 
-    # Ожидаем исключение от БД (ExclusionConstraint)
-    with pytest.raises(Exception) as excinfo:
-        await db_session.commit()
+    # Проверка текста ошибки
+    error_msg = str(excinfo.value).lower()
+    assert any(msg in error_msg for msg in ["exclude", "conflict", "existing key"])
+    
+    # Теперь не нужно делать ручной rollback, 
+    # так как блок `async with db_session.begin_nested()` 
+    # сам откатит savepoint при выходе из `with` после исключения.
 
-    # Проверяем, что ошибка именно от индекса пересечений (GIST)
-    assert "exclude" in str(excinfo.value).lower() or "conflicts with existing key" in str(excinfo.value).lower()
 
-    await db_session.rollback()
+# @pytest.mark.asyncio
+# async def test_overbooking_logic(
+#     db_session: AsyncSession,
+#     created_client: any,
+#     created_apartment: any,
+#     created_landlord: any
+# ):
+#     """
+#     Тест проверяет, что база данных (GIST индекс) блокирует пересекающиеся даты.
+#     """
+#     # 1. Создаем ПЕРВУЮ бронь (успешную)
+#     # Используем созданные фикстурами объекты для корректности связей
+#     booking1 = Booking(
+#         apartment_id=created_apartment.id,
+#         landlord_id=created_landlord.id,
+#         client_id=created_client.id,
+#         booking_period=Range(date(2026, 6, 1), date(2026, 6, 10), bounds="[]"),
+#         cost=Decimal("45000.00"),
+#         booking_status="confirmed"
+#     )
+#     db_session.add(booking1)
+#     await db_session.commit()
+
+#     # 2. Пытаемся создать ВТОРУЮ бронь на те же даты в НОВОЙ транзакции
+#     # Мы используем новую транзакцию, так как предыдущая завершена commit-ом
+#     conflict_booking = Booking(
+#         apartment_id=created_apartment.id,
+#         landlord_id=created_landlord.id,
+#         client_id=created_client.id,
+#         booking_period=Range(date(2026, 6, 5), date(2026, 6, 15), bounds="[]"),
+#         cost=Decimal("50000.00"),
+#         booking_status="confirmed"
+#     )
+#     db_session.add(conflict_booking)
+
+#     # Ожидаем исключение от БД (ExclusionConstraint)
+#     with pytest.raises(Exception) as excinfo:
+#         await db_session.commit()
+
+#     # Проверяем, что ошибка именно от индекса пересечений (GIST)
+#     assert "exclude" in str(excinfo.value).lower() or "conflicts with existing key" in str(excinfo.value).lower()
+
+#     await db_session.rollback()
 
 # Теперь, когда фундамент (модели и база) непоколебим, пора переходить к бизнес-логике и API.
 # Я рекомендую следующий план:

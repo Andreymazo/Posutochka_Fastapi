@@ -34,7 +34,28 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+# Ниже закомменчено, это для логированния ошибок
+# from fastapi.exceptions import ResponseValidationError
+# from fastapi.responses import JSONResponse
+# import logging
 
+# # Настройка логирования, чтобы видеть ошибки в консоли при pytest -s
+# logger = logging.getLogger("fastapi")
+
+# @app.exception_handler(ResponseValidationError)
+# async def validation_exception_handler(request, exc):
+#     # Этот код напечатает подробности ошибки прямо в консоль при запуске тестов
+#     error_details = exc.errors()
+#     print(f"\n❌ Ошибка валидации ответа в {request.url.path}:")
+#     for err in error_details:
+#         print(f"  - Поле: {'.'.join(map(str, err['loc']))}")
+#         print(f"    Ошибка: {err['msg']}")
+#         print(f"    Данные: {err.get('input')}")
+    
+#     return JSONResponse(
+#         status_code=422,
+#         content={"detail": error_details},
+#     )
 # Include routers
 app.include_router(users.router)
 app.include_router(landlords.router)

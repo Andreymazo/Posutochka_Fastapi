@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from sqlalchemy.orm import selectinload
+from sqlalchemy import select
 from app.database import get_async_db
 from app.models.client import Client
 from app.schemas.client import ClientCreate, ClientRead, ClientUpdate
+from typing import Any
 
 router = APIRouter(prefix="/clients", tags=["clients"])
 
@@ -16,17 +17,31 @@ async def get_clients(skip: int = 0, limit: int = 100, db: AsyncSession = Depend
     result = await db.execute(query)
     return result.scalars().all()
 
-
 @router.get("/{client_id}", response_model=ClientRead)
-async def get_client(client_id: int, db: AsyncSession = Depends(get_async_db)) -> Client:
-    """Get a specific client by ID."""
-    query = select(Client).filter(Client.id == client_id)
+async def get_client(
+    client_id: int, 
+    db: AsyncSession = Depends(get_async_db)
+) -> Any:
+    """Get client details with reviews."""
+    query = (
+        select(Client)
+        .options(
+            selectinload(Client.reviews_about_me), # Отзывы о клиенте от арендодателей
+            selectinload(Client.reviews_i_wrote)   # Отзывы, которые написал сам клиент
+        )
+        .where(Client.id == client_id)
+    )
+    
     result = await db.execute(query)
     client = result.scalar_one_or_none()
+    
     if not client:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Client not found"
+        )
+        
     return client
-
 
 @router.post("/", response_model=ClientRead, status_code=status.HTTP_201_CREATED)
 async def create_client(client_data: ClientCreate, db: AsyncSession = Depends(get_async_db)) -> Client:
