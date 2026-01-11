@@ -1,153 +1,146 @@
-"""Tests for Balance API endpoints."""
-
+import pytest
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 from decimal import Decimal
 from typing import Any
-
-from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
-
-from app.models import Balance, User
-
+from app.models import Balance, User # Замените на ваши пути импорта
 
 class TestBalanceEndpoints:
-    """Tests for balance CRUD operations."""
+    """Tests for /balances endpoints (Async version 2026)."""
 
-    # def test_create_balance(
-    #     self,
-    #     client: TestClient,
-    #     created_booking: Booking,
-    #     sample_balance_data: dict[str, Any],
-    # ) -> None:
-    #     """Test creating a new balance."""
-    #     data = {
-    #         **sample_balance_data,
-    #         "booking_id": created_booking.id,
-    #     }
-    #     response = client.post("/balances/", json=data)
-    #     assert response.status_code == 201
-    #     assert response.json()["current_balance"] == sample_balance_data["current_balance"]
-    #     assert response.json()["booking_id"] == created_booking.id
-    def test_create_balance(
+    @pytest.mark.asyncio
+    async def test_create_balance(
         self,
-        client: TestClient,
-        # created_booking больше не нужен для создания баланса
+        client: AsyncClient,
         sample_balance_data: dict[str, Any],
-        created_user,
+        created_client_user: Any,  
     ) -> None:
         """Test creating a new balance."""
-        data = {**sample_balance_data, "user_id": created_user.id}
+        data = {**sample_balance_data, "user_id": created_client_user.id}
+      
+        """Test creating a new balance."""
+        data = {**sample_balance_data, "user_id": created_client_user.id}
 
-        response = client.post("/balances/", json=data)
+        response = await client.post("/balances/", json=data)
 
         assert response.status_code == 201
-        assert Decimal(response.json()["current_balance"]) == Decimal(sample_balance_data["current_balance"])
-        assert "id" in response.json()
+        res_data = response.json()
+        assert Decimal(str(res_data["current_balance"])) == Decimal(str(sample_balance_data["current_balance"]))
+        assert "id" in res_data
 
-    def test_get_balances(
+    @pytest.mark.asyncio
+    async def test_get_balances(
         self,
-        client: TestClient,
-        db_session: Session,
-        created_user: User,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        created_client_user: Any,
         sample_balance_data: dict[str, Any],
     ) -> None:
         """Test retrieving all balances."""
         balance = Balance(
             current_balance=sample_balance_data["current_balance"],
-            user_id=created_user.id,
+            user_id=created_client_user.id,
         )
         db_session.add(balance)
-        db_session.commit()
+        await db_session.commit()
 
-        response = client.get("/balances/")
+        response = await client.get("/balances/")
         assert response.status_code == 200
         assert len(response.json()) >= 1
 
-    def test_get_balance_by_id(
+    @pytest.mark.asyncio
+    async def test_get_balance_by_id(
         self,
-        client: TestClient,
-        db_session: Session,
-        created_user: User,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        created_client_user: Any, 
         sample_balance_data: dict[str, Any],
     ) -> None:
         """Test retrieving a specific balance by ID."""
         balance = Balance(
             current_balance=sample_balance_data["current_balance"],
-            user_id=created_user.id,
+            user_id=created_client_user.id,
         )
         db_session.add(balance)
-        db_session.commit()
-        db_session.refresh(balance)
+        await db_session.commit()
+        await db_session.refresh(balance)
 
-        response = client.get(f"/balances/{balance.id}")
+        response = await client.get(f"/balances/{balance.id}")
         assert response.status_code == 200
-        assert response.json()["id"] == balance.id
-        assert Decimal(response.json()["current_balance"]) == Decimal(sample_balance_data["current_balance"])
+        res_data = response.json()
+        assert res_data["id"] == balance.id
+        assert Decimal(str(res_data["current_balance"])) == Decimal(str(sample_balance_data["current_balance"]))
 
-    def test_get_balance_not_found(self, client: TestClient) -> None:
+    @pytest.mark.asyncio
+    async def test_get_balance_not_found(self, client: AsyncClient) -> None:
         """Test retrieving a non-existent balance."""
-        response = client.get("/balances/99999")
+        response = await client.get("/balances/99999")
         assert response.status_code == 404
 
-    def test_update_balance(
+    @pytest.mark.asyncio
+    async def test_update_balance(
         self,
-        client: TestClient,
-        db_session: Session,
-        created_user: User,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        created_client_user: Any,
         sample_balance_data: dict[str, Any],
     ) -> None:
         """Test updating a balance."""
         balance = Balance(
             current_balance=sample_balance_data["current_balance"],
-            user_id=created_user.id,
+            user_id=created_client_user.id,
         )
         db_session.add(balance)
-        db_session.commit()
-        db_session.refresh(balance)
+        await db_session.commit()
+        await db_session.refresh(balance)
 
         update_data = {"current_balance": 500.0}
-        response = client.patch(f"/balances/{balance.id}", json=update_data)
+        response = await client.patch(f"/balances/{balance.id}", json=update_data)
         assert response.status_code == 200
-        assert Decimal(response.json()["current_balance"]) == 500.0
+        assert Decimal(str(response.json()["current_balance"])) == Decimal("500.0")
 
-    def test_delete_balance(
+    @pytest.mark.asyncio
+    async def test_delete_balance(
         self,
-        client: TestClient,
-        db_session: Session,
-        created_user: User,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        created_client_user: Any,
         sample_balance_data: dict[str, Any],
     ) -> None:
         """Test deleting a balance."""
         balance = Balance(
             current_balance=sample_balance_data["current_balance"],
-            user_id=created_user.id,
+            user_id=created_client_user.id,
         )
         db_session.add(balance)
-        db_session.commit()
-        db_session.refresh(balance)
+        await db_session.commit()
+        await db_session.refresh(balance)
 
-        response = client.delete(f"/balances/{balance.id}")
+        response = await client.delete(f"/balances/{balance.id}")
         assert response.status_code == 204
 
-        # Verify deletion
-        response = client.get(f"/balances/{balance.id}")
+        # Проверка удаления
+        response = await client.get(f"/balances/{balance.id}")
         assert response.status_code == 404
 
-    def test_filter_balances_by_user(
+    @pytest.mark.asyncio
+    async def test_filter_balances_by_user(
         self,
-        client: TestClient,
-        db_session: Session,
-        created_user: User,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        created_client_user: Any,  # Заменили здесь
         sample_balance_data: dict[str, Any],
     ) -> None:
         """Test filtering balances by user_id."""
         balance = Balance(
             current_balance=sample_balance_data["current_balance"],
-            user_id=created_user.id,
+            user_id=created_client_user.id, # И здесь
         )
         db_session.add(balance)
-        db_session.commit()
+        await db_session.commit()
 
-        response = client.get(f"/balances/?user_id={created_user.id}")
+        response = await client.get(f"/balances/?user_id={created_client_user.id}") # И здесь
         assert response.status_code == 200
-        assert len(response.json()) >= 1
-        assert all(b["user_id"] == created_user.id for b in response.json())
+        data = response.json()
+        assert len(data) >= 1
+        assert all(b["user_id"] == created_client_user.id for b in data)

@@ -1,20 +1,20 @@
 """Tests for Review API endpoints."""
 
 from typing import Any
-
-from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
+import pytest
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Booking, Client, Landlord, Review
 from app.models.review import UserRole
 
-
+@pytest.mark.asyncio
 class TestReviewEndpoints:
-    """Tests for review CRUD operations."""
+    """Tests for review CRUD operations (Async version 2026)."""
 
-    def test_create_review(
+    async def test_create_review(
         self,
-        client: TestClient,
+        client: AsyncClient,
         created_booking: Booking,
         created_landlord: Landlord,
         created_client: Client,
@@ -28,16 +28,17 @@ class TestReviewEndpoints:
             "client_id": created_client.id,
             "author_role": "CLIENT",
         }
-        response = client.post("/reviews/", json=data)
+        response = await client.post("/reviews/", json=data)
         assert response.status_code == 201
-        assert response.json()["rating"] == sample_review_data["rating"]
-        assert response.json()["review"] == sample_review_data["review"]
-        assert response.json()["author_role"] == "CLIENT"
+        res_data = response.json()
+        assert res_data["rating"] == sample_review_data["rating"]
+        assert res_data["review"] == sample_review_data["review"]
+        assert res_data["author_role"] == "CLIENT"
 
-    def test_get_reviews(
+    async def test_get_reviews(
         self,
-        client: TestClient,
-        db_session: Session,
+        client: AsyncClient,
+        db_session: AsyncSession,
         created_booking: Booking,
         created_landlord: Landlord,
         created_client: Client,
@@ -53,16 +54,16 @@ class TestReviewEndpoints:
             author_role=UserRole.CLIENT,
         )
         db_session.add(review)
-        db_session.commit()
+        await db_session.commit()
 
-        response = client.get("/reviews/")
+        response = await client.get("/reviews/")
         assert response.status_code == 200
         assert len(response.json()) >= 1
 
-    def test_get_review_by_id(
+    async def test_get_review_by_id(
         self,
-        client: TestClient,
-        db_session: Session,
+        client: AsyncClient,
+        db_session: AsyncSession,
         created_booking: Booking,
         created_landlord: Landlord,
         created_client: Client,
@@ -78,23 +79,24 @@ class TestReviewEndpoints:
             author_role=UserRole.CLIENT,
         )
         db_session.add(review)
-        db_session.commit()
-        db_session.refresh(review)
+        await db_session.commit()
+        await db_session.refresh(review)
 
-        response = client.get(f"/reviews/{review.id}")
+        response = await client.get(f"/reviews/{review.id}")
         assert response.status_code == 200
-        assert response.json()["id"] == review.id
-        assert response.json()["rating"] == sample_review_data["rating"]
+        res_data = response.json()
+        assert res_data["id"] == review.id
+        assert res_data["rating"] == sample_review_data["rating"]
 
-    def test_get_review_not_found(self, client: TestClient) -> None:
+    async def test_get_review_not_found(self, client: AsyncClient) -> None:
         """Test retrieving a non-existent review."""
-        response = client.get("/reviews/99999")
+        response = await client.get("/reviews/99999")
         assert response.status_code == 404
 
-    def test_update_review(
+    async def test_update_review(
         self,
-        client: TestClient,
-        db_session: Session,
+        client: AsyncClient,
+        db_session: AsyncSession,
         created_booking: Booking,
         created_landlord: Landlord,
         created_client: Client,
@@ -110,19 +112,20 @@ class TestReviewEndpoints:
             author_role=UserRole.CLIENT,
         )
         db_session.add(review)
-        db_session.commit()
-        db_session.refresh(review)
+        await db_session.commit()
+        await db_session.refresh(review)
 
         update_data = {"rating": 4, "review": "Updated review text"}
-        response = client.patch(f"/reviews/{review.id}", json=update_data)
+        response = await client.patch(f"/reviews/{review.id}", json=update_data)
         assert response.status_code == 200
-        assert response.json()["rating"] == 4
-        assert response.json()["review"] == "Updated review text"
+        res_data = response.json()
+        assert res_data["rating"] == 4
+        assert res_data["review"] == "Updated review text"
 
-    def test_delete_review(
+    async def test_delete_review(
         self,
-        client: TestClient,
-        db_session: Session,
+        client: AsyncClient,
+        db_session: AsyncSession,
         created_booking: Booking,
         created_landlord: Landlord,
         created_client: Client,
@@ -138,20 +141,20 @@ class TestReviewEndpoints:
             author_role=UserRole.CLIENT,
         )
         db_session.add(review)
-        db_session.commit()
-        db_session.refresh(review)
+        await db_session.commit()
+        await db_session.refresh(review)
 
-        response = client.delete(f"/reviews/{review.id}")
+        response = await client.delete(f"/reviews/{review.id}")
         assert response.status_code == 204
 
         # Verify deletion
-        response = client.get(f"/reviews/{review.id}")
+        response = await client.get(f"/reviews/{review.id}")
         assert response.status_code == 404
 
-    def test_filter_reviews_by_booking(
+    async def test_filter_reviews_by_booking(
         self,
-        client: TestClient,
-        db_session: Session,
+        client: AsyncClient,
+        db_session: AsyncSession,
         created_booking: Booking,
         created_landlord: Landlord,
         created_client: Client,
@@ -167,17 +170,18 @@ class TestReviewEndpoints:
             author_role=UserRole.CLIENT,
         )
         db_session.add(review)
-        db_session.commit()
+        await db_session.commit()
 
-        response = client.get(f"/reviews/?booking_id={created_booking.id}")
+        response = await client.get(f"/reviews/?booking_id={created_booking.id}")
         assert response.status_code == 200
-        assert len(response.json()) >= 1
-        assert all(r["booking_id"] == created_booking.id for r in response.json())
+        data = response.json()
+        assert len(data) >= 1
+        assert all(r["booking_id"] == created_booking.id for r in data)
 
-    def test_filter_reviews_by_landlord(
+    async def test_filter_reviews_by_landlord(
         self,
-        client: TestClient,
-        db_session: Session,
+        client: AsyncClient,
+        db_session: AsyncSession,
         created_booking: Booking,
         created_landlord: Landlord,
         created_client: Client,
@@ -193,17 +197,18 @@ class TestReviewEndpoints:
             author_role=UserRole.CLIENT,
         )
         db_session.add(review)
-        db_session.commit()
+        await db_session.commit()
 
-        response = client.get(f"/reviews/?landlord_id={created_landlord.id}")
+        response = await client.get(f"/reviews/?landlord_id={created_landlord.id}")
         assert response.status_code == 200
-        assert len(response.json()) >= 1
-        assert all(r["landlord_id"] == created_landlord.id for r in response.json())
+        data = response.json()
+        assert len(data) >= 1
+        assert all(r["landlord_id"] == created_landlord.id for r in data)
 
-    def test_filter_reviews_by_client(
+    async def test_filter_reviews_by_client(
         self,
-        client: TestClient,
-        db_session: Session,
+        client: AsyncClient,
+        db_session: AsyncSession,
         created_booking: Booking,
         created_landlord: Landlord,
         created_client: Client,
@@ -219,9 +224,10 @@ class TestReviewEndpoints:
             author_role=UserRole.CLIENT,
         )
         db_session.add(review)
-        db_session.commit()
+        await db_session.commit()
 
-        response = client.get(f"/reviews/?client_id={created_client.id}")
+        response = await client.get(f"/reviews/?client_id={created_client.id}")
         assert response.status_code == 200
-        assert len(response.json()) >= 1
-        assert all(r["client_id"] == created_client.id for r in response.json())
+        data = response.json()
+        assert len(data) >= 1
+        assert all(r["client_id"] == created_client.id for r in data)

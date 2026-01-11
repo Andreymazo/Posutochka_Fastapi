@@ -1,45 +1,24 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from geoalchemy2.shape import from_shape
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy import select, func, cast
+from sqlalchemy.ext.asyncio import AsyncSession
+from geoalchemy2 import Geography
+from geoalchemy2.shape import from_shape, to_shape
 from shapely.geometry.point import Point
-from sqlalchemy.orm import Session
-
-from app.database import get_db
+from app.database import get_async_db 
 from app.models.apartment import Apartment
 from app.schemas.apartment import ApartmentCreate, ApartmentRead, ApartmentUpdate
+from sqlalchemy.orm import selectinload 
+from shapely import wkt 
 
 router = APIRouter(prefix="/apartments", tags=["apartments"])
 
 
-@router.get("/", response_model=list[ApartmentRead])
-def get_apartments(
-    skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
-) -> list[Apartment]:
-    """Get all apartments with pagination."""
-    apartments = db.query(Apartment).offset(skip).limit(limit).all()
-    return apartments
-
-
-@router.get("/{apartment_id}", response_model=ApartmentRead)
-def get_apartment(apartment_id: int, db: Session = Depends(get_db)) -> Apartment:
-    """Get a specific apartment by ID."""
-    apartment = db.query(Apartment).filter(Apartment.id == apartment_id).first()
-    if not apartment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Apartment not found")
-    return apartment
-
-
 @router.post("/", response_model=ApartmentRead, status_code=status.HTTP_201_CREATED)
-def create_apartment(apartment_data: ApartmentCreate, db: Session = Depends(get_db)) -> Apartment:
-    # Use mode='python' to keep the Shapely objects as-is
+async def create_apartment(apartment_data: ApartmentCreate, db: AsyncSession = Depends(get_async_db)) -> Apartment:
     data = apartment_data.model_dump(mode="python")
-
-    # DEBUG: This MUST be <class 'shapely.geometry.point.Point'>
-    # print(f"DEBUG TYPE: {type(data['location'])}")
-
     if not isinstance(data["location"], Point):
-        # Fallback if validator didn't fire (e.g. nested models)
         from shapely import wkt
-
         data["location"] = wkt.loads(data["location"])
 
     # Convert to GeoAlchemy2 WKBElement
@@ -47,28 +26,93 @@ def create_apartment(apartment_data: ApartmentCreate, db: Session = Depends(get_
 
     db_apartment = Apartment(**data)
     db.add(db_apartment)
-    db.commit()
-    db.refresh(db_apartment)
-    return db_apartment
-    # apartment = Apartment(
-    #     name=apartment_data.name,
-    #     description=apartment_data.description,
-    #     price_per_night=apartment_data.price_per_night,
-    #     address=apartment_data.address,
-    #     location=apartment_data.location,
-    # )
-    # db.add(apartment)
-    # db.commit()
-    # db.refresh(apartment)
-    # return apartment
+    await db.commit()
+    
+    # ПРАВИЛЬНЫЙ REFRESH с подгрузкой связей
+    query = select(Apartment).options(selectinload(Apartment.photos)).filter(Apartment.id == db_apartment.id)
+    result = await db.execute(query)
+    return result.scalar_one()
 
+# 1. Сначала специфичный поиск (чтобы не перехватывал {apartment_id})
+@router.get("/search", response_model=List[ApartmentRead])
+async def search_apartments_by_location(
+    lat: float, 
+    lon: float, 
+    radius: float = 1000.0, 
+    db: AsyncSession = Depends(get_async_db)
+):
+    """Поиск апартаментов по гео-локации (PostGIS)."""
+    # 1. Создаем точку (lon первым!)
+    user_geo = func.ST_GeographyFromText(f'POINT({lon} {lat})')
+
+    # 2. Формируем запрос БЕЗ троеточий
+    query = (
+        select(Apartment)
+        .options(selectinload(Apartment.photos)) # Подгружаем связи асинхронно
+        .where(
+            func.ST_DWithin(
+                cast(Apartment.location, Geography),
+                user_geo,
+                radius
+            )
+        )
+        .order_by(
+            func.ST_Distance(
+                cast(Apartment.location, Geography),
+                user_geo
+            )
+        )
+    )
+
+    # 3. Выполняем асинхронно
+    result = await db.execute(query)
+    return result.scalars().all()
+
+@router.get("/", response_model=list[ApartmentRead])
+async def get_apartments(
+    skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_async_db)
+) -> list[Apartment]:
+    """Get all apartments with pagination."""
+    query = select(Apartment).offset(skip).limit(limit)
+    result = await db.execute(query)
+    return result.scalars().all()
+
+@router.get("/{apartment_id}", response_model=ApartmentRead)
+async def get_apartment(apartment_id: int, db: AsyncSession = Depends(get_async_db)) -> Apartment:
+    """Get a specific apartment by ID."""
+    query = select(Apartment).filter(Apartment.id == apartment_id)
+    result = await db.execute(query)
+    apartment = result.scalar_one_or_none()
+    if not apartment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Apartment not found")
+    return apartment
+
+# @router.post("/", response_model=ApartmentRead, status_code=status.HTTP_201_CREATED)
+# async def create_apartment(apartment_data: ApartmentCreate, db: AsyncSession = Depends(get_async_db)) -> Apartment:
+#     data = apartment_data.model_dump(mode="python")
+
+#     if not isinstance(data["location"], Point):
+#         from shapely import wkt
+#         data["location"] = wkt.loads(data["location"])
+
+#     # Convert to GeoAlchemy2 WKBElement
+#     data["location"] = from_shape(data["location"], srid=4326)
+
+#     db_apartment = Apartment(**data)
+#     db.add(db_apartment)
+#     await db.commit()
+#     await db.refresh(db_apartment)
+#     return db_apartment
 
 @router.patch("/{apartment_id}", response_model=ApartmentRead)
-def update_apartment(
-    apartment_id: int, apartment_data: ApartmentUpdate, db: Session = Depends(get_db)
+async def update_apartment(
+    apartment_id: int, apartment_data: ApartmentUpdate, db: AsyncSession = Depends(get_async_db)
 ) -> Apartment:
     """Update an apartment."""
-    apartment = db.query(Apartment).filter(Apartment.id == apartment_id).first()
+    query = select(Apartment).filter(Apartment.id == apartment_id)
+    result = await db.execute(query)
+    apartment = result.scalar_one_or_none()
+    
     if not apartment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Apartment not found")
 
@@ -76,17 +120,19 @@ def update_apartment(
     for field, value in update_data.items():
         setattr(apartment, field, value)
 
-    db.commit()
-    db.refresh(apartment)
+    await db.commit()
+    await db.refresh(apartment)
     return apartment
 
-
 @router.delete("/{apartment_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_apartment(apartment_id: int, db: Session = Depends(get_db)) -> None:
+async def delete_apartment(apartment_id: int, db: AsyncSession = Depends(get_async_db)) -> None:
     """Delete an apartment."""
-    apartment = db.query(Apartment).filter(Apartment.id == apartment_id).first()
+    query = select(Apartment).filter(Apartment.id == apartment_id)
+    result = await db.execute(query)
+    apartment = result.scalar_one_or_none()
+    
     if not apartment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Apartment not found")
 
-    db.delete(apartment)
-    db.commit()
+    await db.delete(apartment)
+    await db.commit()
