@@ -1,18 +1,21 @@
 from datetime import date, timedelta
 from decimal import Decimal
-from typing import Dict, Any
-from sqlalchemy import select, and_
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.models import Apartment, ApartmentAvailability
-from psycopg.types.range import Range
+from typing import Any
+
 from fastapi import HTTPException
+from psycopg.types.range import Range
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models import Apartment, ApartmentAvailability
+
 
 class PricingService:
     @staticmethod
     async def calculate_booking_price(
-        db: AsyncSession, 
-        apartment_id: int, 
-        start_date: date, 
+        db: AsyncSession,
+        apartment_id: int,
+        start_date: date,
         end_date: date
     ) -> Decimal:
         """
@@ -45,30 +48,30 @@ class PricingService:
 
         # 4. Построение карты цен и ограничений по дням
         # Инициализируем каждый день базовой ценой и минимальным сроком (например, 1 день)
-        daily_data: Dict[date, Dict[str, Any]] = {
+        daily_data: dict[date, dict[str, Any]] = {
             start_date + timedelta(days=i): {
                 "price": apartment.price_per_night,
                 "blocked": False,
                 "min_stay": 1 # Базовый min_stay, будет перезаписан правилами
-            } 
+            }
             for i in range(total_nights)
         }
 
         # 5. Накладываем custom_price, блокировки и min_stay из правил
         for rule in availability_rules:
             # Проходим по всем дням бронирования и применяем правила, если день входит в диапазон правила
-            for day in daily_data.keys():
+            for day in daily_data:
                 if day in rule.blocked_period:
                     if rule.is_blocked:
                         # Если день заблокирован, выбрасываем исключение сразу
                         raise HTTPException(
-                            status_code=400, 
+                            status_code=400,
                             detail=f"Апартамент заблокирован для бронирования на дату: {day} (Причина: {rule.reason or 'не указана'})"
                         )
-                    
+
                     if rule.custom_price is not None:
                         daily_data[day]["price"] = rule.custom_price
-                    
+
                     # Обновляем min_stay_days, если найдено более высокое ограничение
                     if rule.min_stay_days > daily_data[day]["min_stay"]:
                         daily_data[day]["min_stay"] = rule.min_stay_days
@@ -77,7 +80,7 @@ class PricingService:
         max_required_min_stay = max(d["min_stay"] for d in daily_data.values())
         if total_nights < max_required_min_stay:
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail=f"На выбранные даты действует ограничение: минимум {max_required_min_stay} ночи"
             )
 

@@ -1,8 +1,8 @@
 """Tests for Apartment API endpoints."""
 
 from typing import Any
+
 import pytest
-from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 
@@ -11,15 +11,15 @@ class TestApartmentEndpoints:
 
     @pytest.mark.asyncio
     async def test_create_apartment(
-        self, 
-        client: AsyncClient, 
+        self,
+        client: AsyncClient,
         sample_apartment_data: dict[str, Any]
     ) -> None:
         """Test creating a new apartment asynchronously."""
-        
+
         # Выполняем асинхронный POST запрос
         response = await client.post("/apartments/", json=sample_apartment_data)
-        
+
         # Проверки
         assert response.status_code == 201
         data = response.json()
@@ -27,7 +27,7 @@ class TestApartmentEndpoints:
         # Нормализуем обе строки (удаляем пробелы), чтобы сравнить только координаты
         expected_loc = sample_apartment_data["location"].replace(" ", "")
         actual_loc = data["location"].replace(" ", "")
-        
+
         assert actual_loc == expected_loc
         assert data["name"] == sample_apartment_data["name"]
         assert data["description"] == sample_apartment_data["description"]
@@ -37,7 +37,7 @@ class TestApartmentEndpoints:
 
     @pytest.mark.asyncio
     async def test_create_apartment_without_description(
-        self, 
+        self,
         client: AsyncClient,  # Используем асинхронный клиент
         created_landlord: Any # Убедитесь, что эта фикстура тоже асинхронная
     ) -> None:
@@ -49,10 +49,10 @@ class TestApartmentEndpoints:
             "location": "POINT(30.3351 59.9343)",
             "landlord_id": created_landlord.id,
         }
-        
+
         # Добавляем await для асинхронного вызова
         response = await client.post("/apartments/", json=apartment_data)
-        
+
         assert response.status_code == 201
         data = response.json()
         assert data["name"] == "Simple Studio"
@@ -75,7 +75,7 @@ class TestApartmentEndpoints:
     @pytest.mark.asyncio
     async def test_get_apartments_empty(self, client: AsyncClient) -> None:
         """Test getting apartments when none exist."""
-        # Опционально: если вы хотите именно пустой список, 
+        # Опционально: если вы хотите именно пустой список,
         # нужно явно удалить апартаменты перед этим тестом,
         # но лучше просто проверять тип данных:
         response = await client.get("/apartments/")

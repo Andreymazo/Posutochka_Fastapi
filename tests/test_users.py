@@ -1,8 +1,10 @@
 """Tests for User API endpoints."""
 
-import pytest
 from typing import Any
+
+import pytest
 from httpx import AsyncClient
+
 
 @pytest.mark.asyncio
 class TestUserEndpoints:
@@ -41,11 +43,11 @@ class TestUserEndpoints:
         # Try to create second user with same phone but different email
         new_user_data = sample_user_data.copy()
         new_user_data["email"] = "different_unique@example.com"
-        
+
         response = await client.post("/users/", json=new_user_data)
         assert response.status_code == 400
         assert "phone number already registered" in response.json()["detail"].lower()
-    
+
     async def test_get_users_empty(self, client: AsyncClient) -> None:
         """Test getting users list is a valid list."""
         response = await client.get("/users/")

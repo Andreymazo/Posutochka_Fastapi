@@ -1,12 +1,12 @@
 """Booking service with business logic for creating and managing bookings."""
-from sqlalchemy import select, exists, or_, and_
-from sqlalchemy import func 
 from fastapi import HTTPException, status
-from sqlalchemy import and_, exists, or_, select
+from sqlalchemy import and_, exists, func, select
 from sqlalchemy.dialects.postgresql import Range
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import joinedload, selectinload
+
 from app.models import Apartment, ApartmentAvailability
+
 # from app.models.apartmentavailability import ApartmentAvailability
 from app.models.booking import Booking
 from app.schemas.booking import BookingCreate, BookingUpdate
@@ -61,7 +61,7 @@ class BookingService:
         # 2. Выполняем проверку
         result = await db.execute(busy_query)
         is_busy = result.scalar()
-        
+
         result = await db.execute(busy_query)
         is_busy = result.scalar()
 
@@ -105,7 +105,7 @@ class BookingService:
 
         db.add(new_booking)
         await db.commit()
-        
+
         # Вместо refresh загружаем всё необходимое одним чистым запросом
         final_query = (
             select(Booking)
@@ -148,7 +148,7 @@ class BookingService:
         )
         result = await db.execute(query)
         # БЕЗ ЭТОГО МЕТОДА БУДЕТ ОШИБКА ИЛИ ПРЕДУПРЕЖДЕНИЕ
-        booking = result.unique().scalar_one_or_none() 
+        booking = result.unique().scalar_one_or_none()
         # booking = result.scalar_one_or_none()
 
         if not booking:
@@ -184,7 +184,7 @@ class BookingService:
         # 1. Базовый запрос с подгрузкой платежей
         query = select(Booking).options(selectinload(Booking.payments),
                 selectinload(Booking.apartment).selectinload(Apartment.availability_rules))
-        
+
         # 2. Фильтры
         if landlord_id:
             query = query.where(Booking.landlord_id == landlord_id)
@@ -192,7 +192,7 @@ class BookingService:
             query = query.where(Booking.client_id == client_id)
         if apartment_id:
             query = query.where(Booking.apartment_id == apartment_id)
-        
+
         # 3. Сортировка (сначала самые свежие брони по дате заезда)
         # .lower() извлекает дату начала из диапазона
         query = query.order_by(func.lower(Booking.booking_period).desc())

@@ -2,18 +2,18 @@
 
 from datetime import date
 
-from fastapi.testclient import TestClient
+import pytest
+from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import Range
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models import Apartment, Client, Landlord
 from app.models.apartment import Apartment
 from app.models.booking import Booking
 from app.models.client import Client
 from app.models.landlord import Landlord
 
-import pytest
-from httpx import AsyncClient
-from app.models import Landlord, Client, Apartment
 
 class TestBookingDateRange:
     """Tests for DATERANGE functionality in Booking model."""
@@ -58,20 +58,20 @@ class TestBookingDateRange:
         created_apartment: Apartment,
     ) -> None:
         """Test that getting a booking returns start_date and end_date from booking_period."""
-        
+
         # 1. Создаем объект Range (используем 2026 год)
         booking_period = Range(date(2026, 4, 1), date(2026, 4, 5), bounds="[)")
-        
+
         # 2. Создаем бронирование напрямую в базе
         booking = Booking(
             booking_period=booking_period,
             cost=200.0,
             booking_status="confirmed",
-            landlord_id=created_landlord.id, 
+            landlord_id=created_landlord.id,
             client_id=created_client.id,
             apartment_id=created_apartment.id,
         )
-        
+
         # Асинхронно добавляем и коммитим
         db_session.add(booking)
         await db_session.commit()
@@ -83,11 +83,11 @@ class TestBookingDateRange:
         # 4. Проверяем результат
         assert response.status_code == 200
         data = response.json()
-        
+
         # Проверяем, что роутер корректно вытащил даты из объекта Range
         assert data["start_date"] == "2026-04-01"
         assert data["end_date"] == "2026-04-05"
-    
+
     @pytest.mark.asyncio
     async def test_update_booking_dates(
         self,
@@ -114,14 +114,14 @@ class TestBookingDateRange:
         # 2. Обновляем дату окончания через PATCH запрос
         # В 2026 году мы ожидаем, что сервис корректно пересоберет Range
         update_data = {"end_date": "2026-05-10"}
-        
+
         # Обязательно добавляем await
         response = await client.patch(f"/bookings/{booking.id}", json=update_data)
 
         # 3. Проверка результата
         assert response.status_code == 200
         data = response.json()
-        
+
         # Проверяем, что дата начала осталась прежней, а дата конца обновилась
         assert data["start_date"] == "2026-05-01"
         assert data["end_date"] == "2026-05-10"
@@ -129,7 +129,7 @@ class TestBookingDateRange:
         # Дополнительная проверка: убедимся, что в БД данные тоже обновились
         await db_session.refresh(booking)
         assert booking.booking_period.upper == date(2026, 5, 10)
-      
+
     @pytest.mark.asyncio
     async def test_search_overlapping_bookings(
         self,
@@ -166,7 +166,7 @@ class TestBookingDateRange:
         # 2. Поиск бронирований, которые пересекаются с 3-7 июня (должен найти booking1)
         search_range = Range(date(2026, 6, 3), date(2026, 6, 7), bounds="[)")
         query = select(Booking.apartment_id).where(Booking.booking_period.overlaps(search_range))
-        
+
         result = await db_session.execute(query)
         occupied_apartments = result.scalars().all()
 
@@ -175,7 +175,7 @@ class TestBookingDateRange:
         # 3. Поиск бронирований, которые пересекаются с 12-20 июня (должен найти booking2)
         search_range2 = Range(date(2026, 6, 12), date(2026, 6, 20), bounds="[)")
         query2 = select(Booking.apartment_id).where(Booking.booking_period.overlaps(search_range2))
-        
+
         result2 = await db_session.execute(query2)
         occupied_apartments2 = result2.scalars().all()
 
@@ -184,7 +184,7 @@ class TestBookingDateRange:
         # 4. Поиск бронирований, которые НЕ пересекаются (20-25 июня)
         search_range3 = Range(date(2026, 6, 20), date(2026, 6, 25), bounds="[)")
         query3 = select(Booking.apartment_id).where(Booking.booking_period.overlaps(search_range3))
-        
+
         result3 = await db_session.execute(query3)
         occupied_apartments3 = result3.scalars().all()
 
@@ -233,8 +233,8 @@ class TestBookingDateRange:
         query2 = select(Booking).where(Booking.booking_period.contains(check_date2))
         result2 = await db_session.execute(query2)
         found_booking2 = result2.scalars().first()
-        assert found_booking2 is None     
-    
+        assert found_booking2 is None
+
     @pytest.mark.asyncio
     async def test_daterange_bounds_exclusive_end(
         self,
@@ -265,7 +265,7 @@ class TestBookingDateRange:
         # 3. Проверяем флаги включения границ
         # lower_inc ( [ ) -> True (включено)
         assert booking.booking_period.lower_inc is True
-        
+
         # upper_inc ( ) ) -> False (исключено)
         # Это означает, что 5-е число — это момент выезда, и оно не занято для следующего гостя
         assert booking.booking_period.upper_inc is False
@@ -310,10 +310,10 @@ class TestBookingDateRange:
         # 3. Проверки
         assert response.status_code == 200
         data = response.json()
-        
+
         # Проверяем количество (может быть больше 2, если в базе остался "мусор" от прошлых тестов)
         assert len(data) >= 2
-        
+
         # Проверяем, что в ответе корректно распарсены даты из Range
         assert any(b["start_date"] == "2026-08-01" for b in data)
         assert any(b["start_date"] == "2026-08-10" for b in data)

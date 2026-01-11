@@ -1,28 +1,30 @@
-from datetime import date
-from sqlalchemy.dialects.postgresql import Range
-from typing import Any
-from collections.abc import AsyncGenerator
-import os
 import asyncio
+import uuid
+from collections.abc import AsyncGenerator
+from datetime import date
+from typing import Any
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy import text
-from app.models.base import Base  
+from sqlalchemy.dialects.postgresql import Range
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from app.database import get_async_db
-from app.main import app 
+from app.main import app
+
 # Важно: импортируем модели, чтобы Base их "увидел"
-from app.models import Apartment, Booking, Landlord, Client, User, ApartmentAvailability, Balance
-import uuid
+from app.models import Apartment, Balance, Booking, Client, Landlord, User
+from app.models.base import Base
 
 # Используем psycopg3 для асинхронного PostgreSQL
 DATABASE_URL = "postgresql+psycopg://postgres:123456@localhost:5433/posutochka"
 
 engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncTestingSessionLocal = async_sessionmaker(
-    bind=engine, 
-    class_=AsyncSession, 
+    bind=engine,
+    class_=AsyncSession,
     expire_on_commit=False
 )
 @pytest.fixture(scope="session")
@@ -40,7 +42,7 @@ async def setup_db():
         # Необходимые расширения для ваших типов данных
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gist;"))
-        
+
         # Очистка и создание таблиц
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
@@ -58,24 +60,23 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 @pytest_asyncio.fixture
 async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     """Асинхронный клиент FastAPI с подменой сессии БД."""
-    
+
     async def _override_get_async_db():
         yield db_session
 
     # Подменяем зависимость, которую используют роутеры
     app.dependency_overrides[get_async_db] = _override_get_async_db
-    
+
     async with AsyncClient(
-        transport=ASGITransport(app=app), 
+        transport=ASGITransport(app=app),
         base_url="http://test"
     ) as ac:
         yield ac
-    
+
     # Сбрасываем подмены после теста
     app.dependency_overrides.clear()
 
 
-import uuid
 
 @pytest.fixture
 def sample_user_data() -> dict[str, Any]:
@@ -124,7 +125,7 @@ def sample_user_owner_data() -> dict[str, Any]:
         "email": f"owner_{unique_id}@example.com", # Уникальный email
         "phone_number": f"+3333{unique_id}",
         "password_hash": "owner_pass",
-        
+
     }
 
 
@@ -157,8 +158,8 @@ def sample_balance_data() -> dict[str, Any]:
 
 @pytest_asyncio.fixture(loop_scope="function")
 async def created_balance(
-    db_session: AsyncSession, 
-    created_landlord_user: User, 
+    db_session: AsyncSession,
+    created_landlord_user: User,
     sample_balance_data: dict[str, Any]
 ) -> Balance:
     """Асинхронное создание баланса в БД."""
@@ -183,7 +184,7 @@ async def created_booking(
     """Создает тестовое бронирование для использования в тестах транзакций/платежей."""
     # Используем актуальные даты 2026 года
     booking_period = Range(date(2026, 2, 1), date(2026, 2, 10), bounds="[)")
-    
+
     booking = Booking(
         booking_period=booking_period,
         cost=1000.0,
@@ -192,7 +193,7 @@ async def created_booking(
         client_id=created_client.id,
         apartment_id=created_apartment.id,
     )
-    
+
     db_session.add(booking)
     await db_session.commit()
     await db_session.refresh(booking)

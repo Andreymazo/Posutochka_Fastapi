@@ -1,14 +1,18 @@
 import asyncio
-from datetime import date, datetime, UTC
+from datetime import UTC, date, datetime
 from decimal import Decimal
-from geoalchemy2.elements import WKTElement 
+
+from geoalchemy2.elements import WKTElement
+
 # Работа с диапазонами дат PostgreSQL
 from psycopg.types.range import Range
 
 # Импорт настроек и движка из вашего database.py
 from app.database import AsyncSessionLocal, async_engine
+
 # Импорт моделей
-from app.models import User, Landlord, Apartment, ApartmentAvailability, Photo
+from app.models import Apartment, ApartmentAvailability, Landlord, Photo, User
+
 
 async def seed_data():
     # Используем вашу фабрику сессий
@@ -67,7 +71,7 @@ async def seed_data():
 
                 # 5. Настраиваем доступность и цены (ApartmentAvailability)
                 # Период новогодних праздников с наценкой
-                holiday_period = Range(date(2026, 12, 30), date(2027, 1, 5), bounds='[]')
+                holiday_period = Range(date(2026, 12, 30), date(2027, 1, 5), bounds="[]")
                 holiday_rule = ApartmentAvailability(
                     apartment_id=new_apartment.id,
                     blocked_period=holiday_period,
@@ -78,7 +82,7 @@ async def seed_data():
                 )
 
                 # Период блокировки (ремонт)
-                repair_period = Range(date(2026, 11, 10), date(2026, 11, 15), bounds='[]')
+                repair_period = Range(date(2026, 11, 10), date(2026, 11, 15), bounds="[]")
                 repair_rule = ApartmentAvailability(
                     apartment_id=new_apartment.id,
                     blocked_period=repair_period,
@@ -162,7 +166,7 @@ if __name__ == "__main__":
 #             # Пример: Блокируем даты на ремонт или спец. цену
 #             # Range(start, end, bounds='[]') включает обе даты
 #             holiday_period = Range(date(2026, 12, 30), date(2027, 1, 5), bounds='[]')
-            
+
 #             availability = ApartmentAvailability(
 #                 apartment_id=new_apartment.id,
 #                 blocked_period=holiday_period,
@@ -171,7 +175,7 @@ if __name__ == "__main__":
 #                 custom_price=Decimal("12000.00"), # Наценка в 2.5 раза
 #                 min_stay_days=3 # Минимум 3 ночи в праздники
 #             )
-            
+
 #             # Пример блокировки на ремонт (полный запрет бронирования)
 #             repair_period = Range(date(2026, 11, 10), date(2026, 11, 15), bounds='[]')
 #             repair_block = ApartmentAvailability(
