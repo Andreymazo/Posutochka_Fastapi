@@ -3,10 +3,10 @@
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
 from app.models import Booking, Client, Landlord, Review
 from app.models.review import UserRole
+
 
 @pytest.mark.asyncio
 class TestClientReviewRelationships:
@@ -31,14 +31,14 @@ class TestClientReviewRelationships:
         )
         db_session.add(landlord_review)
         await db_session.commit()
-        
+
         # В асинхронном режиме нужно явно обновить объект и подгрузить коллекции
         await db_session.refresh(created_client, ["reviews_about_me"])
 
         assert len(created_client.reviews_about_me) == 1
         assert created_client.reviews_about_me[0].id == landlord_review.id
         assert created_client.reviews_about_me[0].author_role == UserRole.LANDLORD
-    
+
 
     async def test_client_reviews_i_wrote(
         self,

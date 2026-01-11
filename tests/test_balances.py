@@ -1,9 +1,12 @@
+from decimal import Decimal
+from typing import Any
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
-from decimal import Decimal
-from typing import Any
-from app.models import Balance, User # Замените на ваши пути импорта
+
+from app.models import Balance  # Замените на ваши пути импорта
+
 
 class TestBalanceEndpoints:
     """Tests for /balances endpoints (Async version 2026)."""
@@ -13,11 +16,11 @@ class TestBalanceEndpoints:
         self,
         client: AsyncClient,
         sample_balance_data: dict[str, Any],
-        created_client_user: Any,  
+        created_client_user: Any,
     ) -> None:
         """Test creating a new balance."""
         data = {**sample_balance_data, "user_id": created_client_user.id}
-      
+
         """Test creating a new balance."""
         data = {**sample_balance_data, "user_id": created_client_user.id}
 
@@ -53,7 +56,7 @@ class TestBalanceEndpoints:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        created_client_user: Any, 
+        created_client_user: Any,
         sample_balance_data: dict[str, Any],
     ) -> None:
         """Test retrieving a specific balance by ID."""

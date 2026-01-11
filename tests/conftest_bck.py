@@ -12,7 +12,15 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.database import get_db
-from app.models import Apartment, Balance, Base, Booking, Client, Landlord, User, ApartmentAvailability
+from app.models import (
+    Apartment,
+    Balance,
+    Base,
+    Booking,
+    Client,
+    Landlord,
+    User,
+)
 from app.routers import (
     apartments,
     balances,
@@ -107,7 +115,7 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
     test_app.dependency_overrides[get_db] = lambda: db_session
     with TestClient(test_app) as test_client:
         yield test_client
-    
+
     test_app.dependency_overrides.clear()
     # def override_get_db() -> Generator[Session, None, None]:
     #     try:

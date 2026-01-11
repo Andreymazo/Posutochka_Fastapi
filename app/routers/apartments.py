@@ -1,15 +1,15 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy import select, func, cast
-from sqlalchemy.ext.asyncio import AsyncSession
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from geoalchemy2 import Geography
-from geoalchemy2.shape import from_shape, to_shape
+from geoalchemy2.shape import from_shape
 from shapely.geometry.point import Point
-from app.database import get_async_db 
+from sqlalchemy import cast, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.database import get_async_db
 from app.models.apartment import Apartment
 from app.schemas.apartment import ApartmentCreate, ApartmentRead, ApartmentUpdate
-from sqlalchemy.orm import selectinload 
-from shapely import wkt 
 
 router = APIRouter(prefix="/apartments", tags=["apartments"])
 
@@ -27,23 +27,23 @@ async def create_apartment(apartment_data: ApartmentCreate, db: AsyncSession = D
     db_apartment = Apartment(**data)
     db.add(db_apartment)
     await db.commit()
-    
+
     # ПРАВИЛЬНЫЙ REFRESH с подгрузкой связей
     query = select(Apartment).options(selectinload(Apartment.photos)).filter(Apartment.id == db_apartment.id)
     result = await db.execute(query)
     return result.scalar_one()
 
 # 1. Сначала специфичный поиск (чтобы не перехватывал {apartment_id})
-@router.get("/search", response_model=List[ApartmentRead])
+@router.get("/search", response_model=list[ApartmentRead])
 async def search_apartments_by_location(
-    lat: float, 
-    lon: float, 
-    radius: float = 1000.0, 
+    lat: float,
+    lon: float,
+    radius: float = 1000.0,
     db: AsyncSession = Depends(get_async_db)
 ):
     """Поиск апартаментов по гео-локации (PostGIS)."""
     # 1. Создаем точку (lon первым!)
-    user_geo = func.ST_GeographyFromText(f'POINT({lon} {lat})')
+    user_geo = func.ST_GeographyFromText(f"POINT({lon} {lat})")
 
     # 2. Формируем запрос БЕЗ троеточий
     query = (
@@ -112,7 +112,7 @@ async def update_apartment(
     query = select(Apartment).filter(Apartment.id == apartment_id)
     result = await db.execute(query)
     apartment = result.scalar_one_or_none()
-    
+
     if not apartment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Apartment not found")
 
@@ -130,7 +130,7 @@ async def delete_apartment(apartment_id: int, db: AsyncSession = Depends(get_asy
     query = select(Apartment).filter(Apartment.id == apartment_id)
     result = await db.execute(query)
     apartment = result.scalar_one_or_none()
-    
+
     if not apartment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Apartment not found")
 

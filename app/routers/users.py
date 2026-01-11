@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
+from app.database import get_async_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 
@@ -9,33 +10,40 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("/", response_model=list[UserRead])
-def get_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)) -> list[User]:
+async def get_users(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_async_db)) -> list[User]:
     """Get all users with pagination."""
-    users = db.query(User).offset(skip).limit(limit).all()
-    return users
+    query = select(User).offset(skip).limit(limit)
+    result = await db.execute(query)
+    return result.scalars().all()
 
 
 @router.get("/{user_id}", response_model=UserRead)
-def get_user(user_id: int, db: Session = Depends(get_db)) -> User:
+async def get_user(user_id: int, db: AsyncSession = Depends(get_async_db)) -> User:
     """Get a specific user by ID."""
-    user = db.query(User).filter(User.id == user_id).first()
+    query = select(User).filter(User.id == user_id)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user
 
 
 @router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-def create_user(user_data: UserCreate, db: Session = Depends(get_db)) -> User:
+async def create_user(user_data: UserCreate, db: AsyncSession = Depends(get_async_db)) -> User:
     """Create a new user."""
     # Check if email already exists
-    existing_user = db.query(User).filter(User.email == user_data.email).first()
+    query = select(User).filter(User.email == user_data.email)
+    result = await db.execute(query)
+    existing_user = result.scalar_one_or_none()
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
 
     # Check if phone number already exists
-    existing_phone = db.query(User).filter(User.phone_number == user_data.phone_number).first()
+    query = select(User).filter(User.phone_number == user_data.phone_number)
+    result = await db.execute(query)
+    existing_phone = result.scalar_one_or_none()
     if existing_phone:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Phone number already registered"
@@ -49,15 +57,17 @@ def create_user(user_data: UserCreate, db: Session = Depends(get_db)) -> User:
         telegram_username=user_data.telegram_username,
     )
     db.add(user)
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
     return user
 
 
 @router.patch("/{user_id}", response_model=UserRead)
-def update_user(user_id: int, user_data: UserUpdate, db: Session = Depends(get_db)) -> User:
+async def update_user(user_id: int, user_data: UserUpdate, db: AsyncSession = Depends(get_async_db)) -> User:
     """Update a user."""
-    user = db.query(User).filter(User.id == user_id).first()
+    query = select(User).filter(User.id == user_id)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
@@ -68,17 +78,19 @@ def update_user(user_id: int, user_data: UserUpdate, db: Session = Depends(get_d
     for field, value in update_data.items():
         setattr(user, field, value)
 
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
     return user
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(user_id: int, db: Session = Depends(get_db)) -> None:
+async def delete_user(user_id: int, db: AsyncSession = Depends(get_async_db)) -> None:
     """Delete a user."""
-    user = db.query(User).filter(User.id == user_id).first()
+    query = select(User).filter(User.id == user_id)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    db.delete(user)
-    db.commit()
+    await db.delete(user)
+    await db.commit()

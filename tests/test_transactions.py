@@ -1,10 +1,13 @@
 """Tests for Transaction API endpoints."""
 
-import pytest
 from typing import Any
+
+import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models import Balance, Booking, Transaction, User
+
 
 @pytest.mark.asyncio
 class TestTransactionEndpoints:
@@ -24,14 +27,14 @@ class TestTransactionEndpoints:
         transaction_data = {
             "amount": sample_payment_data["amount"],
             "transaction_type": "booking_payment", # или другое значение из Enum
-            "user_id": created_landlord_user.id, 
+            "user_id": created_landlord_user.id,
             "booking_id": created_booking.id,
             "balance_id": created_balance.id,
         }
-        
+
         # ОБЯЗАТЕЛЬНО await для post
         response = await client.post("/transactions/", json=transaction_data)
-        
+
         print(response.json()) # Это покажет, какое именно поле не нравится Pydantic
         assert response.status_code == 201
         data = response.json()
@@ -54,7 +57,7 @@ class TestTransactionEndpoints:
         transaction = Transaction(
             amount=sample_payment_data["amount"],
             # ИСПОЛЬЗУЕМ валидный тип из вашего Enum (например, 'booking_income')
-            transaction_type="booking_income", 
+            transaction_type="booking_income",
             user_id=created_landlord_user.id,
             booking_id=created_booking.id,
             balance_id=created_balance.id,
@@ -64,10 +67,10 @@ class TestTransactionEndpoints:
 
         # 2. Выполняем GET запрос
         response = await client.get("/transactions/")
-        
+
         assert response.status_code == 200
         data = response.json()
-        
+
         # 3. Проверки
         assert len(data) >= 1
         # Проверяем, что наша транзакция есть в списке по ID пользователя

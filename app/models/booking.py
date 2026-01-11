@@ -1,11 +1,11 @@
 # from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
-from sqlalchemy import Index 
+
 from sqlalchemy import Enum, ForeignKey, Integer, Numeric
-from sqlalchemy.dialects.postgresql import DATERANGE
+from sqlalchemy.dialects.postgresql import DATERANGE, ExcludeConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import ExcludeConstraint
+
 from app.models.base import Base
 
 if TYPE_CHECKING:

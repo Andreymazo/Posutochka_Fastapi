@@ -1,10 +1,13 @@
 """Tests for Owner API endpoints."""
 
 from typing import Any
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models import Booking, Owner
+
 
 class TestOwnerEndpoints:
     """Tests for owner CRUD operations (Async version 2026)."""
@@ -24,9 +27,9 @@ class TestOwnerEndpoints:
             "user_id": created_owner_user.id,
             "booking_id": created_booking.id,
         }
-        
+
         response = await client.post("/owners/", json=data)
-        
+
         assert response.status_code == 201
         res_json = response.json()
         assert res_json["amount"] == sample_owner_data["amount"]

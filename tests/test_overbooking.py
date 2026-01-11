@@ -1,9 +1,12 @@
-import pytest
 from datetime import date
 from decimal import Decimal
+
+import pytest
 from psycopg.types.range import Range
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models import Booking
+
 
 @pytest.mark.asyncio
 async def test_overbooking_logic(
@@ -21,7 +24,7 @@ async def test_overbooking_logic(
         apartment_id=created_apartment.id,
         landlord_id=created_landlord.id,
         client_id=created_client.id,
-        booking_period=Range(date(2026, 6, 1), date(2026, 6, 10), bounds='[]'),
+        booking_period=Range(date(2026, 6, 1), date(2026, 6, 10), bounds="[]"),
         cost=Decimal("45000.00"),
         booking_status="confirmed"
     )
@@ -34,19 +37,19 @@ async def test_overbooking_logic(
         apartment_id=created_apartment.id,
         landlord_id=created_landlord.id,
         client_id=created_client.id,
-        booking_period=Range(date(2026, 6, 5), date(2026, 6, 15), bounds='[]'),
+        booking_period=Range(date(2026, 6, 5), date(2026, 6, 15), bounds="[]"),
         cost=Decimal("50000.00"),
         booking_status="confirmed"
     )
     db_session.add(conflict_booking)
-    
+
     # Ожидаем исключение от БД (ExclusionConstraint)
     with pytest.raises(Exception) as excinfo:
         await db_session.commit()
-    
+
     # Проверяем, что ошибка именно от индекса пересечений (GIST)
     assert "exclude" in str(excinfo.value).lower() or "conflicts with existing key" in str(excinfo.value).lower()
-    
+
     await db_session.rollback()
 
 # Теперь, когда фундамент (модели и база) непоколебим, пора переходить к бизнес-логике и API.
@@ -60,8 +63,8 @@ async def test_overbooking_logic(
 #     Проверяет min_stay_days.
 
 # 2. Поиск по гео-локации (Spatial Search)
-# Реализовать эндпоинт GET /apartments/search, который принимает широту, долготу и радиус 
-# (в метрах) и возвращает ближайшие апартаменты. Благодаря PostGIS, запрос в SQLAlchemy будет 
+# Реализовать эндпоинт GET /apartments/search, который принимает широту, долготу и радиус
+# (в метрах) и возвращает ближайшие апартаменты. Благодаря PostGIS, запрос в SQLAlchemy будет
 # выглядеть примерно так:
 # python
 

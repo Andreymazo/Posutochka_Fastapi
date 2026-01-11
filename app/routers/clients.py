@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
+from app.database import get_async_db
 from app.models.client import Client
 from app.schemas.client import ClientCreate, ClientRead, ClientUpdate
 
@@ -9,23 +10,26 @@ router = APIRouter(prefix="/clients", tags=["clients"])
 
 
 @router.get("/", response_model=list[ClientRead])
-def get_clients(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)) -> list[Client]:
+async def get_clients(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_async_db)) -> list[Client]:
     """Get all clients with pagination."""
-    clients = db.query(Client).offset(skip).limit(limit).all()
-    return clients
+    query = select(Client).offset(skip).limit(limit)
+    result = await db.execute(query)
+    return result.scalars().all()
 
 
 @router.get("/{client_id}", response_model=ClientRead)
-def get_client(client_id: int, db: Session = Depends(get_db)) -> Client:
+async def get_client(client_id: int, db: AsyncSession = Depends(get_async_db)) -> Client:
     """Get a specific client by ID."""
-    client = db.query(Client).filter(Client.id == client_id).first()
+    query = select(Client).filter(Client.id == client_id)
+    result = await db.execute(query)
+    client = result.scalar_one_or_none()
     if not client:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found")
     return client
 
 
 @router.post("/", response_model=ClientRead, status_code=status.HTTP_201_CREATED)
-def create_client(client_data: ClientCreate, db: Session = Depends(get_db)) -> Client:
+async def create_client(client_data: ClientCreate, db: AsyncSession = Depends(get_async_db)) -> Client:
     """Create a new client."""
     client = Client(
         user_id=client_data.user_id,
@@ -33,17 +37,19 @@ def create_client(client_data: ClientCreate, db: Session = Depends(get_db)) -> C
         last_name=client_data.last_name,
     )
     db.add(client)
-    db.commit()
-    db.refresh(client)
+    await db.commit()
+    await db.refresh(client)
     return client
 
 
 @router.patch("/{client_id}", response_model=ClientRead)
-def update_client(
-    client_id: int, client_data: ClientUpdate, db: Session = Depends(get_db)
+async def update_client(
+    client_id: int, client_data: ClientUpdate, db: AsyncSession = Depends(get_async_db)
 ) -> Client:
     """Update a client."""
-    client = db.query(Client).filter(Client.id == client_id).first()
+    query = select(Client).filter(Client.id == client_id)
+    result = await db.execute(query)
+    client = result.scalar_one_or_none()
     if not client:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found")
 
@@ -51,17 +57,19 @@ def update_client(
     for field, value in update_data.items():
         setattr(client, field, value)
 
-    db.commit()
-    db.refresh(client)
+    await db.commit()
+    await db.refresh(client)
     return client
 
 
 @router.delete("/{client_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_client(client_id: int, db: Session = Depends(get_db)) -> None:
+async def delete_client(client_id: int, db: AsyncSession = Depends(get_async_db)) -> None:
     """Delete a client."""
-    client = db.query(Client).filter(Client.id == client_id).first()
+    query = select(Client).filter(Client.id == client_id)
+    result = await db.execute(query)
+    client = result.scalar_one_or_none()
     if not client:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found")
 
-    db.delete(client)
-    db.commit()
+    await db.delete(client)
+    await db.commit()

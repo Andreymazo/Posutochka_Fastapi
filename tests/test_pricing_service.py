@@ -1,10 +1,13 @@
-import pytest
 from datetime import date
 from decimal import Decimal
+
+import pytest
+from fastapi import HTTPException
 from psycopg.types.range import Range
+
 from app.models import ApartmentAvailability
 from app.services.pricing import PricingService
-from fastapi import HTTPException
+
 
 @pytest.mark.asyncio
 async def test_calculate_total_cost_mixed_prices(
@@ -29,7 +32,7 @@ async def test_calculate_total_cost_mixed_prices(
     total = await PricingService.calculate_booking_price(
         db_session, created_apartment.id, date(2026, 1, 1), date(2026, 1, 5)
     )
-    
+
     assert total == Decimal("30000.00")
 
 @pytest.mark.asyncio

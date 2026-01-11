@@ -33,7 +33,7 @@ def include_object(object, name, type_, reflected, compare_to):
     # Если это таблица, проверяем, описана ли она в наших моделях
     if type_ == "table":
         return name in target_metadata.tables
-    
+
     # Для индексов: игнорируем системные индексы PostGIS (обычно начинаются с idx_tiger или tiger)
     if type_ == "index" and name and (name.startswith("idx_tiger") or name.startswith("tiger")):
         return False
@@ -60,8 +60,8 @@ def run_migrations_offline() -> None:
         dialect_opts={"paramstyle": "named"},
         include_object=include_object
     )
-    
-    
+
+
     with context.begin_transaction():
         context.run_migrations()
 
@@ -81,11 +81,11 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, 
+            connection=connection,
             target_metadata=target_metadata,
             include_object=include_object
             )
-        
+
         with context.begin_transaction():
             context.run_migrations()
 
