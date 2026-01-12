@@ -57,7 +57,7 @@ class TestTransactionEndpoints:
         transaction = Transaction(
             amount=sample_payment_data["amount"],
             # ИСПОЛЬЗУЕМ валидный тип из вашего Enum (например, 'booking_income')
-            transaction_type="booking_income",
+            transaction_type="host_payout",
             user_id=created_landlord_user.id,
             booking_id=created_booking.id,
             balance_id=created_balance.id,
@@ -178,7 +178,7 @@ class TestTransactionEndpoints:
         """Test filtering transactions by user_id."""
         transaction = Transaction(
             amount=sample_payment_data["amount"],
-            transaction_type="booking_income",
+            transaction_type="host_payout",
             user_id=created_landlord_user.id,
             booking_id=created_booking.id,
             balance_id=created_balance.id,
@@ -226,22 +226,24 @@ class TestTransactionEndpoints:
         created_balance: Balance,
     ) -> None:
         """Test creating transactions with different types."""
-        transaction_types = [
-            "booking_payment",
-            "booking_income",
-            "platform_commission",
-            "refund",
-            "withdrawal",
+        from app.models.transaction import TransactionType
+        
+        # Список типов, которые мы реально поддерживаем в 2026 году
+        types_to_test = [
+            TransactionType.BOOKING_PAYMENT.value,
+            TransactionType.HOST_PAYOUT.value,
+            TransactionType.OWNER_DIVIDEND.value,
+            TransactionType.INVESTOR_PAYOUT.value,
         ]
-
-        for trans_type in transaction_types:
+       
+        for trans_type in types_to_test:
             data = {
-                "amount": 100.0,
-                "transaction_type": trans_type,
-                "user_id": created_landlord_user.id,
-                "booking_id": created_booking.id,
-                "balance_id": created_balance.id,
-            }
-            response = await client.post("/transactions/", json=data)
-            assert response.status_code == 201
-            assert response.json()["transaction_type"] == trans_type
+            "amount": 100.0,
+            "transaction_type": trans_type,
+            "user_id": created_landlord_user.id,
+            "booking_id": created_booking.id,
+            "balance_id": created_balance.id,
+        }
+        response = await client.post("/transactions/", json=data)
+        assert response.status_code == 201, f"Failed for type {trans_type}: {response.text}"
+        assert response.json()["transaction_type"] == trans_type

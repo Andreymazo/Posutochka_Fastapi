@@ -19,7 +19,7 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    # ... остальные поля (phone, password, etc) ...
+    
 
     # РОЛИ (One-to-One)
     landlord: Mapped[Optional["Landlord"]] = relationship(back_populates="user", uselist=False, cascade="all, delete-orphan")
@@ -27,10 +27,16 @@ class User(Base):
     balance: Mapped[Optional["Balance"]] = relationship(back_populates="user", uselist=False, cascade="all, delete-orphan")
     investor: Mapped[Optional["Investor"]] = relationship(back_populates="user", uselist=False, cascade="all, delete-orphan")
     owner: Mapped[Optional["Owner"]] = relationship(back_populates="user", uselist=False, cascade="all, delete-orphan")
+    phone_number: Mapped[str] = mapped_column(String(15), unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    # registration_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    registration_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC))
+    telegram_username: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     # ИСТОРИЯ (One-to-Many)
     wallet_history: Mapped[list["Transaction"]] = relationship(back_populates="user")
     owner_earnings: Mapped[list["OwnerEarning"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    
     def __repr__(self) -> str:
         return f"User(id={self.id}, email='{self.email}')"
 
@@ -41,11 +47,11 @@ class User(Base):
 
 #     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 #     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-#     phone_number: Mapped[str] = mapped_column(String(15), unique=True, nullable=False)
-#     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-#     # registration_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-#     registration_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC))
-#     telegram_username: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # phone_number: Mapped[str] = mapped_column(String(15), unique=True, nullable=False)
+    # password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    # # registration_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    # registration_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC))
+    # telegram_username: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 #     # Relationships - One-to-One
 #     landlord: Mapped[Optional["Landlord"]] = relationship(

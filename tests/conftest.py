@@ -2,7 +2,7 @@ import asyncio
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import date
-from typing import Any
+from typing import Any, Callable
 
 import pytest
 import pytest_asyncio
@@ -129,6 +129,18 @@ def sample_user_data() -> dict[str, Any]:
         "telegram_username": f"tg_user_{unique_suffix}",
     }
 
+@pytest.fixture
+def sample_user_data_factory() -> Callable[[], dict[str, Any]]:
+    """Фабрика для генерации уникальных данных пользователя при каждом вызове."""
+    def _generate_data():
+        unique_suffix = uuid.uuid4().hex[:8] # Увеличим длину для надежности
+        return {
+            "email": f"user_{unique_suffix}@example.com",
+            "phone_number": f"+7999{str(uuid.uuid4().int)[:8]}", 
+            "password_hash": "secure_hash_2026",
+            "telegram_username": f"tg_user_{unique_suffix}",
+        }
+    return _generate_data
 
 @pytest.fixture
 def sample_user_landlord_data() -> dict[str, Any]:
@@ -152,10 +164,10 @@ def sample_user_client_data() -> dict[str, Any]:
     }
 
 @pytest.fixture
-def sample_owner_data() -> dict[str, Any]:
-    """Данные именно для сущности Owner (сумма к выплате и т.д.)."""
+def sample_owner_data():
     return {
-        "amount": 100.0,
+        "current_share": 0.1500,  # 15% доля
+        "is_active": True
     }
 
 @pytest.fixture
@@ -299,6 +311,7 @@ async def created_apartment(db_session: AsyncSession, created_landlord: Landlord
     await db_session.refresh(apartment)
     return apartment
 
+
 @pytest.fixture
 def sample_review_data() -> dict[str, Any]:
     """Sample review data for testing."""
@@ -308,7 +321,7 @@ def sample_review_data() -> dict[str, Any]:
     }
 
 @pytest.fixture
-async def sample_apartment_data(created_landlord: Any) -> dict[str, Any]:
+def sample_apartment_data(created_landlord: Any) -> dict[str, Any]:
     """Sample apartment data for testing (Updated for 2026)."""
     return {
         "name": "Cozy Studio",
@@ -318,3 +331,69 @@ async def sample_apartment_data(created_landlord: Any) -> dict[str, Any]:
         "location": "POINT(37.6173 55.7558)",  # Координаты Москвы
         "landlord_id": created_landlord.id,
     }
+
+from decimal import Decimal
+import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models import User, Landlord, Owner, Investor, Balance
+import pytest
+from decimal import Decimal
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models import User, Owner, Investor, Landlord, Balance
+
+@pytest.fixture
+async def mock_owner_profile(
+    db_session: AsyncSession, 
+    sample_user_data_factory  
+) -> User:
+    """Создает профиль Владельца с уникальными данными и балансом."""
+    # 1. Создаем User напрямую
+    user = User(**sample_user_data_factory())
+    db_session.add(user)
+    await db_session.flush()
+    
+    # 2. Добавляем роль Владельца (100% доля) и нулевой баланс
+    owner_role = Owner(user_id=user.id, current_share=Decimal("1.0000"), is_active=True)
+    balance = Balance(user_id=user.id, current_balance=Decimal("0.00"))
+    
+    db_session.add_all([owner_role, balance])
+    await db_session.flush()
+    return user
+
+@pytest.fixture
+async def mock_investor_profile(
+    db_session: AsyncSession,
+    sample_user_data_factory) -> User:
+    """Создает профиль Инвестора с уникальными данными и балансом."""
+    user = User(**sample_user_data_factory())
+    db_session.add(user)
+    await db_session.flush()
+    
+    # Инвестор с вложением 10 000 и нулевым возвратом на старте
+    investor_role = Investor(
+        user_id=user.id, 
+        investment_amount=Decimal("10000.00"), 
+        returned_amount=Decimal("0.00")
+    )
+    balance = Balance(user_id=user.id, current_balance=Decimal("0.00"))
+    
+    db_session.add_all([investor_role, balance])
+    await db_session.flush()
+    return user
+
+@pytest.fixture
+async def mock_landlord_profile(
+    db_session: AsyncSession,
+    sample_user_data_factory
+) -> User:
+    """Создает профиль Арендодателя с уникальными данными и балансом."""
+    user = User(**sample_user_data_factory())
+    db_session.add(user)
+    await db_session.flush()
+    
+    landlord_role = Landlord(user_id=user.id, first_name="Test", last_name="Landlord")
+    balance = Balance(user_id=user.id, current_balance=Decimal("0.00"))
+    
+    db_session.add_all([landlord_role, balance])
+    await db_session.flush()
+    return user

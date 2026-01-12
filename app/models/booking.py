@@ -1,10 +1,11 @@
-# from datetime import datetime
+from typing import Any, List, Optional
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Enum, ForeignKey, Integer, Numeric
 from sqlalchemy.dialects.postgresql import DATERANGE, ExcludeConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.ext.hybrid import hybrid_property
 
 from app.models.base import Base
 
@@ -16,60 +17,78 @@ if TYPE_CHECKING:
     from app.models.review import Review
     from app.models.transaction import Transaction
 
-
 class Booking(Base):
-    """Booking model - represents a reservation."""
-
+    """
+    Модель Бронирования — центральный узел системы 'Посуточка'.
+    Связывает клиента, арендодателя и объект недвижимости.
+    """
     __tablename__ = "booking"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    # start_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    # end_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    # Вместо start_date и end_date
+    
+    # Использование DATERANGE для исключения пересечений на уровне БД
     booking_period: Mapped[Any] = mapped_column(DATERANGE, nullable=False)
-
+    
+    # Финансовые показатели
     cost: Mapped[Decimal] = mapped_column(Numeric(precision=10, scale=2), nullable=False)
+    
     booking_status: Mapped[str] = mapped_column(
-        Enum("pending", "confirmed", "cancelled", name="booking_status", create_type=False),
+        # Добавил 'completed' и 'refunded' для полноты фин. цикла
+        Enum("pending", "confirmed", "cancelled", "completed", "refunded", 
+             name="booking_status", create_type=False),
         nullable=False,
+        default="pending" # Добавьте дефолтное значение
     )
-
-    # Foreign keys
+    # Внешние ключи
     landlord_id: Mapped[int] = mapped_column(
-        ForeignKey("landlord.id", ondelete="CASCADE"), nullable=False
+        ForeignKey("landlord.id", ondelete="CASCADE"), nullable=False, index=True
     )
     client_id: Mapped[int] = mapped_column(
-        ForeignKey("client.id", ondelete="CASCADE"), nullable=False
+        ForeignKey("client.id", ondelete="CASCADE"), nullable=False, index=True
     )
     apartment_id: Mapped[int] = mapped_column(
-        ForeignKey("apartment.id", ondelete="CASCADE"), nullable=False
+        ForeignKey("apartment.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
-    # Relationships (у брони ОДИН владелец, ОДИН клиент, ОДНА квартира).
-    # # Many-to-One: Бронь ссылается на одного родителя
+    # Relationships
     landlord: Mapped["Landlord"] = relationship(back_populates="bookings")
     client: Mapped["Client"] = relationship(back_populates="bookings")
     apartment: Mapped["Apartment"] = relationship(back_populates="bookings")
-    # # Отзыв (1-к-1) Решили сделать двустороннюю возможность отзывы писать
-    # и на клиента тоже, поэтому закоммнтируме пока
-    # review: Mapped["Review | None"] = relationship(back_populates="booking", uselist=False)
+    
+    reviews: Mapped[List["Review"]] = relationship(back_populates="booking", cascade="all, delete-orphan")
+    payments: Mapped[List["Payment"]] = relationship(back_populates="booking", cascade="all, delete-orphan")
+    transactions: Mapped[List["Transaction"]] = relationship(back_populates="booking", cascade="all, delete-orphan")
+    
 
-    reviews: Mapped[list["Review"]] = relationship(back_populates="booking")
-    # One-to-Many: Одна бронь — список платежей и балансовых транзакций
-    # В моделях Payment и Balance поле должно называться back_populates="booking"
-    # One-to-Many: Одна бронь — много платежей (фактов оплаты)
-    payments: Mapped[list["Payment"]] = relationship(back_populates="booking")
+    # --- ГИБРИДНЫЕ СВОЙСТВА И ЛОГИКА ---
 
-    # One-to-Many: Одна бронь — много транзакций
-    # имя атрибута 'transactions' должно совпадать с back_populates в Transaction
-    transactions: Mapped[list["Transaction"]] = relationship(back_populates="booking")
+    @hybrid_property
+    def duration_nights(self) -> int:
+        """Возвращает количество ночей бронирования."""
+        if self.booking_period:
+            # В PostgreSQL DATERANGE верхняя граница обычно исключается [)
+            return (self.booking_period.upper - self.booking_period.lower).days
+        return 0
 
-    # ГИГАНТСКИЙ ПЛЮС: GIST индекс.
-    # Он физически запретит в базе создание пересекающихся броней для одной квартиры.
-    # NOTE: GIST index is created via Alembic migration (not here) because it requires
-    # explicit operator classes (int4_ops, range_ops) which aren't supported by SQLAlchemy Index
+    @property
+    def total_paid_real(self) -> Decimal:
+        """Считает реально поступившие внешние платежи (из модели Payment)."""
+        # Важно: p.amount может быть float в вашей модели Payment, 
+        # приведение через str гарантирует точность Decimal
+        return sum(
+            (Decimal(str(p.amount)) for p in self.payments if p.payment_status == "paid"), 
+            Decimal("0.00")
+        )
+
+    @property
+    def is_fully_paid(self) -> bool:
+        """Проверка: оплачено ли бронирование полностью для начала распределения прибыли."""
+        return self.total_paid_real >= self.cost
+
+    # --- ОГРАНИЧЕНИЯ (CONSTRAINTS) ---
 
     __table_args__ = (
+        # GIST индекс для предотвращения пересекающихся дат на одну и ту же квартиру
         ExcludeConstraint(
             ("apartment_id", "="),
             ("booking_period", "&&"),
@@ -77,11 +96,80 @@ class Booking(Base):
             using="gist",
         ),
     )
+
     def __repr__(self) -> str:
         return (
-            f"Booking(id={self.id}, apartment_id={self.apartment_id}, "
-            f"status='{self.booking_status}')"
+            f"<Booking(id={self.id}, cost={self.cost}, "
+            f"period={self.booking_period}, status={self.booking_status})>"
         )
+
+    # ... (остальное верно) ...
+
+# class Booking(Base):
+#     """Booking model - represents a reservation."""
+
+#     __tablename__ = "booking"
+
+#     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+#     # start_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+#     # end_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+#     # Вместо start_date и end_date
+#     booking_period: Mapped[Any] = mapped_column(DATERANGE, nullable=False)
+
+#     cost: Mapped[Decimal] = mapped_column(Numeric(precision=10, scale=2), nullable=False)
+#     booking_status: Mapped[str] = mapped_column(
+#         Enum("pending", "confirmed", "cancelled", name="booking_status", create_type=False),
+#         nullable=False,
+#     )
+
+#     # Foreign keys
+#     landlord_id: Mapped[int] = mapped_column(
+#         ForeignKey("landlord.id", ondelete="CASCADE"), nullable=False
+#     )
+#     client_id: Mapped[int] = mapped_column(
+#         ForeignKey("client.id", ondelete="CASCADE"), nullable=False
+#     )
+#     apartment_id: Mapped[int] = mapped_column(
+#         ForeignKey("apartment.id", ondelete="CASCADE"), nullable=False
+#     )
+
+#     # Relationships (у брони ОДИН владелец, ОДИН клиент, ОДНА квартира).
+#     # # Many-to-One: Бронь ссылается на одного родителя
+#     landlord: Mapped["Landlord"] = relationship(back_populates="bookings")
+#     client: Mapped["Client"] = relationship(back_populates="bookings")
+#     apartment: Mapped["Apartment"] = relationship(back_populates="bookings")
+#     # # Отзыв (1-к-1) Решили сделать двустороннюю возможность отзывы писать
+#     # и на клиента тоже, поэтому закоммнтируме пока
+#     # review: Mapped["Review | None"] = relationship(back_populates="booking", uselist=False)
+
+#     reviews: Mapped[list["Review"]] = relationship(back_populates="booking")
+#     # One-to-Many: Одна бронь — список платежей и балансовых транзакций
+#     # В моделях Payment и Balance поле должно называться back_populates="booking"
+#     # One-to-Many: Одна бронь — много платежей (фактов оплаты)
+#     payments: Mapped[list["Payment"]] = relationship(back_populates="booking")
+
+#     # One-to-Many: Одна бронь — много транзакций
+#     # имя атрибута 'transactions' должно совпадать с back_populates в Transaction
+#     transactions: Mapped[list["Transaction"]] = relationship(back_populates="booking")
+
+#     # ГИГАНТСКИЙ ПЛЮС: GIST индекс.
+#     # Он физически запретит в базе создание пересекающихся броней для одной квартиры.
+#     # NOTE: GIST index is created via Alembic migration (not here) because it requires
+#     # explicit operator classes (int4_ops, range_ops) which aren't supported by SQLAlchemy Index
+
+#     __table_args__ = (
+#         ExcludeConstraint(
+#             ("apartment_id", "="),
+#             ("booking_period", "&&"),
+#             name="exclude_overlapping_bookings",
+#             using="gist",
+#         ),
+#     )
+#     def __repr__(self) -> str:
+#         return (
+#             f"Booking(id={self.id}, apartment_id={self.apartment_id}, "
+#             f"status='{self.booking_status}')"
+#         )
 
 
 # Важное примечание для миграций (2026):

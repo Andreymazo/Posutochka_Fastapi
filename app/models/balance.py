@@ -12,8 +12,6 @@ if TYPE_CHECKING:
     from app.models.user import User
 
 """Итоговый счет. Сколько денег сейчас."""
-
-
 class Balance(Base):
     """Balance model - represents earnings from bookings."""
 

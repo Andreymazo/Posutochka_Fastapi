@@ -165,3 +165,107 @@ todo:
 - Advertisement.
 - Calendar
 
+from typing import Any, List, Optional
+from decimal import Decimal
+from typing import TYPE_CHECKING, Any
+
+from sqlalchemy import Enum, ForeignKey, Integer, Numeric
+from sqlalchemy.dialects.postgresql import DATERANGE, ExcludeConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.ext.hybrid import hybrid_property
+
+from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.apartment import Apartment
+    from app.models.client import Client
+    from app.models.landlord import Landlord
+    from app.models.payment import Payment
+    from app.models.review import Review
+    from app.models.transaction import Transaction
+
+class Booking(Base):
+    """
+    Модель Бронирования — центральный узел системы 'Посуточка'.
+    Связывает клиента, арендодателя и объект недвижимости.
+    """
+    __tablename__ = "booking"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    
+    # Использование DATERANGE для исключения пересечений на уровне БД
+    booking_period: Mapped[Any] = mapped_column(DATERANGE, nullable=False)
+    
+    # Финансовые показатели
+    cost: Mapped[Decimal] = mapped_column(Numeric(precision=10, scale=2), nullable=False)
+    
+    booking_status: Mapped[str] = mapped_column(
+        # Добавил 'completed' и 'refunded' для полноты фин. цикла
+        Enum("pending", "confirmed", "cancelled", "completed", "refunded", 
+             name="booking_status", create_type=False),
+        nullable=False,
+        default="pending" # Добавьте дефолтное значение
+    )
+    # Внешние ключи
+    landlord_id: Mapped[int] = mapped_column(
+        ForeignKey("landlord.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    client_id: Mapped[int] = mapped_column(
+        ForeignKey("client.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    apartment_id: Mapped[int] = mapped_column(
+        ForeignKey("apartment.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    # Relationships
+    landlord: Mapped["Landlord"] = relationship(back_populates="bookings")
+    client: Mapped["Client"] = relationship(back_populates="bookings")
+    apartment: Mapped["Apartment"] = relationship(back_populates="bookings")
+    
+    reviews: Mapped[List["Review"]] = relationship(back_populates="booking", cascade="all, delete-orphan")
+    payments: Mapped[List["Payment"]] = relationship(back_populates="booking", cascade="all, delete-orphan")
+    transactions: Mapped[List["Transaction"]] = relationship(back_populates="booking", cascade="all, delete-orphan")
+    
+
+    # --- ГИБРИДНЫЕ СВОЙСТВА И ЛОГИКА ---
+
+    @hybrid_property
+    def duration_nights(self) -> int:
+        """Возвращает количество ночей бронирования."""
+        if self.booking_period:
+            # В PostgreSQL DATERANGE верхняя граница обычно исключается [)
+            return (self.booking_period.upper - self.booking_period.lower).days
+        return 0
+
+    @property
+    def total_paid_real(self) -> Decimal:
+        """Считает реально поступившие внешние платежи (из модели Payment)."""
+        # Важно: p.amount может быть float в вашей модели Payment, 
+        # приведение через str гарантирует точность Decimal
+        return sum(
+            (Decimal(str(p.amount)) for p in self.payments if p.payment_status == "paid"), 
+            Decimal("0.00")
+        )
+
+    @property
+    def is_fully_paid(self) -> bool:
+        """Проверка: оплачено ли бронирование полностью для начала распределения прибыли."""
+        return self.total_paid_real >= self.cost
+
+    # --- ОГРАНИЧЕНИЯ (CONSTRAINTS) ---
+
+    __table_args__ = (
+        # GIST индекс для предотвращения пересекающихся дат на одну и ту же квартиру
+        ExcludeConstraint(
+            ("apartment_id", "="),
+            ("booking_period", "&&"),
+            name="exclude_overlapping_bookings",
+            using="gist",
+        ),
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<Booking(id={self.id}, cost={self.cost}, "
+            f"period={self.booking_period}, status={self.booking_status})>"
+        )

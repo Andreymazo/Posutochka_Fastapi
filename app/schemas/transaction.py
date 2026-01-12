@@ -3,16 +3,7 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
-
-class TransactionType(str, Enum):
-    """Transaction type enumeration."""
-
-    BOOKING_PAYMENT = "booking_payment"
-    BOOKING_INCOME = "booking_income"
-    PLATFORM_COMMISSION = "platform_commission"
-    REFUND = "refund"
-    WITHDRAWAL = "withdrawal"
-
+from app.models.transaction import TransactionType 
 
 class TransactionBase(BaseModel):
     """Base schema for Transaction - common fields."""

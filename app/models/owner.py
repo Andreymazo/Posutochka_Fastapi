@@ -27,6 +27,7 @@ class Owner(Base):
     # Relationships
     user: Mapped["User"] = relationship(back_populates="owner")
     owner_earnings: Mapped[list["OwnerEarning"]] = relationship(
+        "OwnerEarning",
         back_populates="owner_role", 
         cascade="all, delete-orphan"
     )

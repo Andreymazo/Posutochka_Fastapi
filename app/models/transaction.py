@@ -23,9 +23,23 @@ if TYPE_CHECKING:
     from app.models.booking import Booking
     from app.models.user import User
 
+class TransactionType(str, enum.Enum):
+    # Внешние/Клиентские
+    BOOKING_PAYMENT = "booking_payment"     # Списание с клиента
+    REFUND = "refund"                       # Возврат клиенту
+    WITHDRAWAL = "withdrawal"               # Вывод средств из системы
+    
+    # Распределение внутри системы (Убрал дубли)
+    HOST_PAYOUT = "host_payout"             # Доход арендодателя (Лендлорда)
+    OWNER_DIVIDEND = "owner_dividend"       # Дивиденды владельца проекта
+    INVESTOR_PAYOUT = "investor_payout"     # Выплата инвестору (возврат или прибыль)
+    SYSTEM_TAX = "system_tax"               # Удержание налога
+    # Оставил старые типы, если они используются в других местах, 
+    # но рекомендую заменить их на новые (HOST_PAYOUT, OWNER_DIVIDEND)
+    # BOOKING_INCOME = "booking_income"  
+    # PLATFORM_COMMISSION = "platform_commission"
+
 """История платежей"""
-
-
 class Transaction(Base):
     """История начислений: за какую бронь сколько упало. Фиксирует
     внутреннее движение средств внутри вашей системы учета
