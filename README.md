@@ -154,3 +154,15 @@ pytest --cov=app --cov-report=term-missing tests/
 
 после установки Клайн в ВСКоде, устанавливает сервер : 
 npx @modelcontextprotocol/server-filesystem /home/andreymazo/Projects/Posutochka
+
+{
+  "mcpServers": {
+    "my_files": {
+      "command": "/home/andreymazo/.pyenv/versions/posutochka_fasapi/bin/python",
+      "args": [
+        "/home/andreymazo/Projects/Posutochka/mcp_local_fs.py"
+      ]
+    }
+  }
+}
+/home/andreymazo/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json
