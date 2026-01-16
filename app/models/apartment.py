@@ -1,8 +1,8 @@
 from decimal import Decimal
 from typing import TYPE_CHECKING
-
+from datetime import datetime
 from geoalchemy2.types import Geography
-from sqlalchemy import ForeignKey, Integer, Numeric, String
+from sqlalchemy import ForeignKey, Integer, Numeric, String, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -20,6 +20,10 @@ class Apartment(Base):
     __tablename__ = "apartment"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+       # Аналог auto_now_add=True (выполняется на стороне БД при вставке)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Аналог auto_now=True (обновляется при каждом UPDATE)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     # Рекомендуется Numeric для точности цен

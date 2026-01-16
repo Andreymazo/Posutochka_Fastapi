@@ -3,7 +3,7 @@ from decimal import Decimal
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import ForeignKey, Integer, Numeric, func
+from sqlalchemy import ForeignKey, Integer, Numeric, func, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -20,7 +20,8 @@ class OwnerEarning(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     applied_share: Mapped[Decimal] = mapped_column(Numeric(5, 4), nullable=False) 
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     
     # Внешние ключи
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
@@ -30,6 +31,7 @@ class OwnerEarning(Base):
     # Relationships
     user: Mapped["User"] = relationship(back_populates="owner_earnings")
     owner_role: Mapped["Owner"] = relationship(back_populates="owner_earnings")
+    booking: Mapped["Booking"] = relationship(back_populates="owner_earnings")
 
 # class OwnerEarning(Base):
 #     id: Mapped[int] = mapped_column(Integer, primary_key=True)

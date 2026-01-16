@@ -2,7 +2,7 @@ import enum
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, ForeignKey, Integer, String, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, ForeignKey, Integer, String, UniqueConstraint, func, DateTime
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -30,8 +30,8 @@ class Review(Base):
     review: Mapped[str] = mapped_column(String(700), nullable=True)
     author_role: Mapped[UserRole] = mapped_column(SQLEnum(UserRole), nullable=False, index=True)
 
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     booking_id: Mapped[int] = mapped_column(
         ForeignKey("booking.id", ondelete="CASCADE"), nullable=False

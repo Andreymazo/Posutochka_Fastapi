@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import ForeignKey, Integer, Numeric, func
+from sqlalchemy import ForeignKey, Integer, Numeric, func, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -49,9 +49,9 @@ class Transaction(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     # Аналог auto_now_add=True (выполняется на стороне БД при вставке)
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     # Аналог auto_now=True (обновляется при каждом UPDATE)
-    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     """: Это сумма, которая зачисляется на баланс конкретного пользователя 
     или списывается с него. Эта сумма может отличаться от суммы amount в Payment"""
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)

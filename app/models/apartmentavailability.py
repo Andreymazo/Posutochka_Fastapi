@@ -1,8 +1,8 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String
+from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String, DateTime, func    
 from sqlalchemy.dialects.postgresql import DATERANGE, Range
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,7 +17,10 @@ class ApartmentAvailability(Base):
     __tablename__ = "apartment_availability"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-
+     # Аналог auto_now_add=True (выполняется на стороне БД при вставке)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Аналог auto_now=True (обновляется при каждом UPDATE)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     apartment_id: Mapped[int] = mapped_column(
         ForeignKey("apartment.id", ondelete="CASCADE"),
         nullable=False,

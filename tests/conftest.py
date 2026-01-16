@@ -10,13 +10,11 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import Range
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
 from app.database import get_async_db
-from app.main import app
-
-# Важно: импортируем модели, чтобы Base их "увидел"
-from app.models import Apartment, Balance, Booking, Client, Landlord, User
+from app.models import Apartment, Balance, Booking, Client, Landlord, User, Investor, Owner
 from app.models.base import Base
+from decimal import Decimal
+from app.main import app
 
 # Используем psycopg3 для асинхронного PostgreSQL
 DATABASE_URL = "postgresql+psycopg://postgres:123456@localhost:5433/posutochka"
@@ -332,14 +330,7 @@ def sample_apartment_data(created_landlord: Any) -> dict[str, Any]:
         "landlord_id": created_landlord.id,
     }
 
-from decimal import Decimal
-import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.models import User, Landlord, Owner, Investor, Balance
-import pytest
-from decimal import Decimal
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.models import User, Owner, Investor, Landlord, Balance
+
 
 @pytest.fixture
 async def mock_owner_profile(

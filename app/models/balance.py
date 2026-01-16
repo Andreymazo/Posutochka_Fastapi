@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Integer, Numeric, func
+from sqlalchemy import ForeignKey, Integer, Numeric, func, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -19,9 +19,9 @@ class Balance(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     # Аналог auto_now_add=True (выполняется на стороне БД при вставке)
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     # Аналог auto_now=True (обновляется при каждом UPDATE)
-    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     # Сумма транзакции.
     # precision=12 позволяет хранить миллиарды, scale=2 — копейки
     current_balance: Mapped[Decimal] = mapped_column(

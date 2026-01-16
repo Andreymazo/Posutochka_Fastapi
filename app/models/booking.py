@@ -1,8 +1,8 @@
 from typing import Any, List, Optional
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
-
-from sqlalchemy import Enum, ForeignKey, Integer, Numeric
+from datetime import datetime
+from sqlalchemy import Enum, ForeignKey, Integer, Numeric, DateTime, func
 from sqlalchemy.dialects.postgresql import DATERANGE, ExcludeConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from app.models.payment import Payment
     from app.models.review import Review
     from app.models.transaction import Transaction
+    from app.models.owner_earning import OwnerEarning
 
 class Booking(Base):
     """
@@ -25,7 +26,9 @@ class Booking(Base):
     __tablename__ = "booking"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
     # Использование DATERANGE для исключения пересечений на уровне БД
     booking_period: Mapped[Any] = mapped_column(DATERANGE, nullable=False)
     
@@ -54,7 +57,13 @@ class Booking(Base):
     landlord: Mapped["Landlord"] = relationship(back_populates="bookings")
     client: Mapped["Client"] = relationship(back_populates="bookings")
     apartment: Mapped["Apartment"] = relationship(back_populates="bookings")
-    
+    # легко проверить начисления владельцу прямо из объекта брони:
+    owner_earnings: Mapped[List["OwnerEarning"]] = relationship(
+    "OwnerEarning", 
+    back_populates="booking", 
+    cascade="all, delete-orphan"
+)
+
     reviews: Mapped[List["Review"]] = relationship(back_populates="booking", cascade="all, delete-orphan")
     payments: Mapped[List["Payment"]] = relationship(back_populates="booking", cascade="all, delete-orphan")
     transactions: Mapped[List["Transaction"]] = relationship(back_populates="booking", cascade="all, delete-orphan")

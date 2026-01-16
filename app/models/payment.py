@@ -1,7 +1,6 @@
-from datetime import datetime
 from typing import TYPE_CHECKING
-
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric
+from datetime import datetime, timezone
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -16,8 +15,10 @@ class Payment(Base):
     __tablename__ = "payment"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     amount: Mapped[float] = mapped_column(Numeric(precision=10, scale=2), nullable=False)
-    payment_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    payment_date: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     payment_status: Mapped[str] = mapped_column(
         Enum("paid", "pending", "failed", name="payment_status", create_type=False),
         nullable=False,

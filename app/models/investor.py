@@ -1,6 +1,6 @@
 import enum
 from decimal import Decimal
-from sqlalchemy import Numeric, ForeignKey, Enum, Integer
+from sqlalchemy import Numeric, ForeignKey, Enum, Integer, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 from sqlalchemy.sql import func
@@ -39,8 +39,8 @@ class Investor(Base):
     investor_type: Mapped[InvestorType] = mapped_column(
         Enum(InvestorType), nullable=False, default=InvestorType.EQUITY
     )
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),server_default=func.now(), onupdate=func.now())
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="investor")

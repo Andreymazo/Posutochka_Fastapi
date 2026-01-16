@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Integer, Numeric, func
+from sqlalchemy import ForeignKey, Integer, Numeric, func, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -21,8 +21,8 @@ class Owner(Base):
     current_share: Mapped[Decimal] = mapped_column(Numeric(5, 4), default=0)
     is_active: Mapped[bool] = mapped_column(default=True)
     
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="owner")
