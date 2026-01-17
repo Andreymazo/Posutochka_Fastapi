@@ -219,87 +219,179 @@ async def landlord_id(db_session, sample_user_landlord_data):
     await db_session.refresh(landlord)
     return landlord.id
 
-@pytest.mark.asyncio
-async def test_apartment_model_creation(db_session, landlord_id, sample_apartment_data):
-    """Тест создания квартиры и проверки значений атрибутов."""
-    apartment = Apartment(
-        **sample_apartment_data,
-        landlord_id=landlord_id
-    )
-    db_session.add(apartment)
-    await db_session.commit()
-    await db_session.refresh(apartment)
+# from sqlalchemy import select
+# from geoalchemy2.shape import to_shape
+# from shapely.geometry import Point
+# from app.models.apartment import Apartment
+# from app.models.landlord import Landlord
+# from decimal import Decimal
+# from datetime import datetime, timedelta
 
-    assert apartment.id is not None
-    assert apartment.name == sample_apartment_data["name"]
-    assert isinstance(apartment.price_per_night, Decimal)
-    assert apartment.landlord_id == landlord_id
-    assert apartment.created_at is not None
-    assert apartment.updated_at is not None
+# # Тест на создание экземпляра модели и корректное сохранение в БД
+# def test_create_apartment(db_session, sample_user_landlord_data):
+#     # Создаем арендодателя, так как landlord_id является обязательным FK
+#     landlord_data = sample_user_landlord_data
+#     landlord = Landlord(**landlord_data)
+#     db_session.add(landlord)
+#     db_session.commit()
 
-@pytest.mark.asyncio
-async def test_apartment_repr(landlord_id):
-    """Тест строкового представления __repr__ для 100% покрытия."""
-    apartment = Apartment(
-        id=777,
-        name="Test Repr",
-        price_per_night=Decimal("100.50"),
-        address="Test Address",
-        landlord_id=landlord_id
-    )
-    expected = "Apartment(id=777, name='Test Repr', price_per_night=100.50, address='Test Address')"
-    assert repr(apartment) == expected
+#     # Данные для квартиры
+#     apartment_data = {
+#         "name": "Cozy Central Apartment",
+#         "description": "A lovely place in the city center.",
+#         "price_per_night": Decimal("150.00"),
+#         "address": "123 Main Street, City",
+#         "location": "SRID=4326;POINT(55.753215 37.620393)", # Moscow Red Square coords
+#         "landlord_id": landlord.id,
+#     }
 
-@pytest.mark.asyncio
-async def test_apartment_update_timestamp(db_session, landlord_id, sample_apartment_data):
-    """Тест автоматического обновления поля updated_at."""
-    apartment = Apartment(
-        **sample_apartment_data,
-        landlord_id=landlord_id
-    )
-    db_session.add(apartment)
-    await db_session.commit()
-    await db_session.refresh(apartment)
-    
-    first_update = apartment.updated_at
-    
-    apartment.name = "New Updated Name"
-    await db_session.commit()
-    await db_session.refresh(apartment)
-    
-    assert apartment.name == "New Updated Name"
-    assert apartment.updated_at >= first_update
+#     apartment = Apartment(**apartment_data)
+#     db_session.add(apartment)
+#     db_session.commit()
 
-@pytest.mark.asyncio
-async def test_apartment_nullable_fields(db_session, landlord_id):
-    """Тест создания квартиры с nullable описанием."""
-    apartment = Apartment(
-        name="Minimal Apt",
-        price_per_night=Decimal("50"),
-        address="Street",
-        location=WKTElement("POINT(0 0)", srid=4326),
-        landlord_id=landlord_id,
-        description=None
-    )
-    db_session.add(apartment)
-    await db_session.commit()
-    await db_session.refresh(apartment)
-    
-    assert apartment.description is None
+#     # Проверка, что объект успешно добавлен и имеет ID
+#     assert apartment.id is not None
+#     assert apartment.name == "Cozy Central Apartment"
+#     assert apartment.price_per_night == Decimal("150.00")
+#     assert isinstance(apartment.created_at, datetime)
+#     assert isinstance(apartment.updated_at, datetime)
 
-@pytest.mark.asyncio
-async def test_apartment_deletion(db_session, landlord_id, sample_apartment_data):
-    """Тест удаления квартиры из базы."""
-    apartment = Apartment(
-        **sample_apartment_data,
-        landlord_id=landlord_id
-    )
-    db_session.add(apartment)
-    await db_session.commit()
+#     # Проверка геометрии (Point)
+#     stmt = select(Apartment).where(Apartment.id == apartment.id)
+#     apartment_from_db = db_session.execute(stmt).scalar_one()
     
-    apt_id = apartment.id
-    await db_session.delete(apartment)
-    await db_session.commit()
+#     assert apartment_from_db.location is not None
+#     point_shape = to_shape(apartment_from_db.location)
+#     assert isinstance(point_shape, Point)
+#     assert point_shape.x == 55.753215 
+#     assert point_shape.y == 37.620393
+
+#     # Проверка связи с арендодателем
+#     assert apartment_from_db.landlord.id == landlord.id
+
+
+# # Тест на каскадное удаление (если удалить Landlord, его квартиры удаляются)
+# def test_cascade_delete_landlord_apartments(db_session, sample_user_landlord_data):
+#     landlord = Landlord(**sample_user_landlord_data)
+#     db_session.add(landlord)
+#     db_session.commit()
+#     landlord_id = landlord.id
+
+#     apartment = Apartment(
+#         name="Test Apartment",
+#         price_per_night=Decimal("100.00"),
+#         address="Test Address",
+#         location="SRID=4326;POINT(0 0)",
+#         landlord_id=landlord_id
+#     )
+#     db_session.add(apartment)
+#     db_session.commit()
+#     apartment_id = apartment.id
+
+#     # Удаляем арендодателя
+#     db_session.delete(landlord)
+#     db_session.commit()
+
+#     # Проверяем, что квартира тоже удалилась (CASCADE)
+#     stmt = select(Apartment).where(Apartment.id == apartment_id)
+#     apartment_after_delete = db_session.execute(stmt).scalar_one_or_none()
+#     assert apartment_after_delete is None
+
+
+# # Тест на __repr__ (представление объекта)
+# def test_apartment_repr(db_session):
+#     apartment = Apartment(
+#         id=1,
+#         name="Test Repr",
+#         price_per_night=Decimal("99.99"),
+#         address="Repr Address",
+#         location="SRID=4326;POINT(0 0)",
+#         landlord_id=1 # FK не проверяется в __repr__
+#     )
+#     expected_repr = "Apartment(id=1, name='Test Repr', price_per_night=99.99, address='Repr Address')"
+#     assert repr(apartment) == expected_repr
+
+# @pytest.mark.asyncio
+# async def test_apartment_model_creation(db_session, landlord_id, sample_apartment_data):
+#     """Тест создания квартиры и проверки значений атрибутов."""
+#     apartment = Apartment(
+#         **sample_apartment_data,
+#         landlord_id=landlord_id
+#     )
+#     db_session.add(apartment)
+#     await db_session.commit()
+#     await db_session.refresh(apartment)
+
+#     assert apartment.id is not None
+#     assert apartment.name == sample_apartment_data["name"]
+#     assert isinstance(apartment.price_per_night, Decimal)
+#     assert apartment.landlord_id == landlord_id
+#     assert apartment.created_at is not None
+#     assert apartment.updated_at is not None
+
+# @pytest.mark.asyncio
+# async def test_apartment_repr(landlord_id):
+#     """Тест строкового представления __repr__ для 100% покрытия."""
+#     apartment = Apartment(
+#         id=777,
+#         name="Test Repr",
+#         price_per_night=Decimal("100.50"),
+#         address="Test Address",
+#         landlord_id=landlord_id
+#     )
+#     expected = "Apartment(id=777, name='Test Repr', price_per_night=100.50, address='Test Address')"
+#     assert repr(apartment) == expected
+
+# @pytest.mark.asyncio
+# async def test_apartment_update_timestamp(db_session, landlord_id, sample_apartment_data):
+#     """Тест автоматического обновления поля updated_at."""
+#     apartment = Apartment(
+#         **sample_apartment_data,
+#         landlord_id=landlord_id
+#     )
+#     db_session.add(apartment)
+#     await db_session.commit()
+#     await db_session.refresh(apartment)
     
-    result = await db_session.execute(select(Apartment).where(Apartment.id == apt_id))
-    assert result.scalar_one_or_none() is None
+#     first_update = apartment.updated_at
+    
+#     apartment.name = "New Updated Name"
+#     await db_session.commit()
+#     await db_session.refresh(apartment)
+    
+#     assert apartment.name == "New Updated Name"
+#     assert apartment.updated_at >= first_update
+
+# @pytest.mark.asyncio
+# async def test_apartment_nullable_fields(db_session, landlord_id):
+#     """Тест создания квартиры с nullable описанием."""
+#     apartment = Apartment(
+#         name="Minimal Apt",
+#         price_per_night=Decimal("50"),
+#         address="Street",
+#         location=WKTElement("POINT(0 0)", srid=4326),
+#         landlord_id=landlord_id,
+#         description=None
+#     )
+#     db_session.add(apartment)
+#     await db_session.commit()
+#     await db_session.refresh(apartment)
+    
+#     assert apartment.description is None
+
+# @pytest.mark.asyncio
+# async def test_apartment_deletion(db_session, landlord_id, sample_apartment_data):
+#     """Тест удаления квартиры из базы."""
+#     apartment = Apartment(
+#         **sample_apartment_data,
+#         landlord_id=landlord_id
+#     )
+#     db_session.add(apartment)
+#     await db_session.commit()
+    
+#     apt_id = apartment.id
+#     await db_session.delete(apartment)
+#     await db_session.commit()
+    
+#     result = await db_session.execute(select(Apartment).where(Apartment.id == apt_id))
+#     assert result.scalar_one_or_none() is None

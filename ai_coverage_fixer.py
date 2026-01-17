@@ -52,25 +52,43 @@ def generate_tests_for_file(file_info):
         with open("tests/conftest.py", "r") as f:
             conftest_code = f.read()
 
-    prompt = f"""
-       Используются фикстуры из conftest.py: ( db_session, sample_user_client_data, sample_user_landlord_data, sample_apartment_data). 
-    Написать тесты для файла: {target_file}
+    # prompt = f"""
+    #    Используются фикстуры из {conftest_code}: ( db_session, sample_user_client_data, sample_user_landlord_data, sample_apartment_data). 
+    # Написать тесты для файла: {target_file}
     
-    КОД ФАЙЛА ДЛЯ ТЕСТОВ:
-    {source_code}
+    # КОД ФАЙЛА ДЛЯ ТЕСТОВ:
+    # {source_code}
     
-    ВАЖНО: 
-    - Импортировать модели: from app.models.{os.path.basename(target_file).replace('.py', '')} import ...
-    - Не писать лишних рассуждений, только код.
-    Напиши pytest тесты для этого файла: {target_file}
-    Пропущенные строки в покрытии: {missing}
+    # ВАЖНО: 
+    # - Импортировать модели: from app.models.{os.path.basename(target_file).replace('.py', '')} import ...
+    # - Не писать лишних рассуждений, только код.
+    # Напиши pytest тесты для этого файла: {target_file}
+    # Пропущенные строки в покрытии: {missing}
     
-    ИСХОДНЫЙ КОД:
-    {source_code}
     
-    Верни только чистый код Python. Используй TestClient.
-    """
+    # Верни только чистый код Python. Используй TestClient.
+    # """
+    prompt = """
+    Используются фикстуры из %s: ( db_session, sample_user_client_data, sample_user_landlord_data, sample_apartment_data). 
+    Написать тесты для файла: %s
+    Пропущенные строки в покрытии: %s
 
+    ВАЖНО: 
+    - Импортировать модели: from app.models.%s import ...
+    - Не писать лишних рассуждений, только код.
+    - Верни только чистый код Python. Используй TestClient.
+
+    КОД ФАЙЛА ДЛЯ ТЕСТОВ:
+    %s
+    """ 
+    # Активируем форматирование с помощью оператора %
+    prompt = prompt % (
+        "tests/conftest.py", # Используем путь вместо переменной conftest_code
+        target_file,
+        missing,
+        os.path.basename(target_file).replace('.py', ''),
+        source_code
+    )
     pyperclip.copy(prompt)
     
     print("\n" + "="*50)

@@ -1,0 +1,14 @@
+[run]
+source = app
+branch = True
+# Если используешь sqlalchemy + asyncio, greenlet часто необходим
+concurrency = greenlet 
+
+[report]
+show_missing = True
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if TYPE_CHECKING:
+    raise AssertionError
+    raise NotImplementedError

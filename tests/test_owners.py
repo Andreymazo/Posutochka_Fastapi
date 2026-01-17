@@ -98,6 +98,8 @@ class TestOwnerEndpoints:
         """Test retrieving a non-existent owner."""
         response = await client.get("/owners/99999")
         assert response.status_code == 404
+        await client.patch("/owners/999999", json={"first_name": "X"})
+        await client.delete("/owners/999999")
 
     @pytest.mark.asyncio
     async def test_update_owner(

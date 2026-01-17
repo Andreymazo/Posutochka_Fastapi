@@ -388,3 +388,20 @@ async def mock_landlord_profile(
     db_session.add_all([landlord_role, balance])
     await db_session.flush()
     return user
+
+@pytest.fixture
+async def mock_client_profile(
+    db_session: AsyncSession,
+    sample_user_data_factory
+) -> User:
+    """Создает профиль Арендодателя с уникальными данными и балансом."""
+    user = User(**sample_user_data_factory())
+    db_session.add(user)
+    await db_session.flush()
+    
+    client_role = Client(user_id=user.id, first_name="Test", last_name="Client")
+    balance = Balance(user_id=user.id, current_balance=Decimal("0.00"))
+    
+    db_session.add_all([client_role, balance])
+    await db_session.flush()
+    return user
