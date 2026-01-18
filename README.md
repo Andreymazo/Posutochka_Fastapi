@@ -228,4 +228,47 @@ async def telegram_webhook(update: dict, db: AsyncSession = Depends(get_async_db
 Думаю…
 Принято! Отличная работа на сегодня. Мы достигли серьезных показателей для 17 января 2026 года:
 95% покрытия и 142 успешно пройденных теста. Проект уже выглядит как зрелое и надежное приложение.
-Идея с Telegram-ботом в качестве «быстрого» интерфейса для чата — это очень сильный ход. Это решит проблему мгновенных уведомлений без усложнения проекта вебсокетами и сохранит твой идеальный Coverage.
+Идея с Telegram-ботом в качестве «быстрого» интерфейса для чата — это очень сильный ход. Это решит проблему мгновенных уведомлений без усложнения проекта вебсокетами и сохранит твой идеальный Coverage.\
+
+uvicorn main:app --host 0.0.0.0 --port 8000
+npm install -g localtunnel --registry=https://registry.npmmirror.com 
+or 
+ssh -p 443 -R0:localhost:8000 a.pinggy.io
+
+lt --port 8000
+curl ifconfig.me
+95.24.24.137
+вставили свой айпи и разблокировали тунель
+https://api.telegram.org/bot<ВАШ_НОВЫЙ_ТОКЕН>/setWebhook?url=https://tough-zoos-drive.loca.lt(здесь вставляем свой токен)
+
+Шаг 1: Разблокировка Localtunnel (ОБЯЗАТЕЛЬНО)
+Перед тем как Telegram сможет слать запросы, ты должен один раз «открыть» эту ссылку в браузере:
+
+    Перейди по адресу https://tough-zoos-drive.loca.lt.
+    Тебя попросят ввести Tunnel Password.
+    Твой пароль — это твой внешний IP. Узнай его, введя в терминале: curl ifconfig.me (или посмотри на странице localtunnel.me/tunnel-password).
+    Нажми Submit. Если увидел экран твоего FastAPI (например, "Not Found" или "Welcome"), значит всё готово.
+
+Шаг 2: Регистрация Webhook в Telegram
+Теперь скопируй эту ссылку и выполни её в браузере (замени <TOKEN> на свой токен от BotFather):
+https://api.telegram.org<TOKEN>/setWebhook?url=https://tough-zoos-drive.loca.lt
+Если в ответе пришло {"ok":true,"result":true,"description":"Webhook was set"}, значит связь налажена.
+Шаг 3: Получение твоего ID
+
+    Зайди в свой Telegram-бот и нажми Start.
+    В терминале, где запущен FastAPI (uvicorn), ты увидишь строку:
+    Пользователь запустил бота. Его TG ID: 123456789.
+    Скопируй этот ID.
+
+Шаг 4: Привязка в базе данных
+Чтобы система знала, что ты — это Арендодатель:
+
+    Зайди в свою базу данных (через DBeaver, pgAdmin или консоль).
+    Выполни SQL-запрос (подставь свой ID и email своего аккаунта):
+
+sql
+
+UPDATE "user" SET tg_user_id = 123456789 WHERE email = 'твой_email@example.com';
+
+lt --port 8000 --subdomain tough-zoos-drive-2026
+lt --port 8000 --subdomain tough-zoos-drive

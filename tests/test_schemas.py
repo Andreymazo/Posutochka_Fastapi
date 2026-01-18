@@ -2,10 +2,11 @@
 
 from datetime import UTC, datetime
 
+from datetime import date
+import pytest
 import pytest
 from pydantic import ValidationError
 from shapely.geometry import Point
-
 from app.schemas.apartment import ApartmentCreate, ApartmentUpdate
 from app.schemas.balance import BalanceCreate, BalanceUpdate
 from app.schemas.booking import BookingCreate, BookingStatus, BookingUpdate
@@ -15,6 +16,9 @@ from app.schemas.payment import PaymentCreate, PaymentStatus, PaymentUpdate
 from app.schemas.photo import PhotoCreate
 from app.schemas.review import ReviewCreate, ReviewUpdate
 from app.schemas.user import UserCreate, UserRead, UserUpdate
+from app.schemas.apartment import ApartmentRead
+from geoalchemy2.elements import WKBElement
+
 
 # Mock location for testing
 MOCK_LOCATION = Point(37.6173, 55.7558)  # Moscow coordinates
@@ -376,3 +380,101 @@ class TestReviewSchemas:
         update = ReviewUpdate(rating=4)
         assert update.rating == 4
         assert update.review is None
+
+
+
+def test_apartment_read_handle_dal_types_coverage():
+    """Закрывает строки 65-67 в app/schemas/apartment.py через ApartmentRead."""
+    
+    # Базовые данные для всех тестов
+    base_data = {
+        "id": 1,
+        "name": "Test",
+        "price_per_night": 100.0,
+        "address": "Address",
+        "landlord_id": 1,
+        "photos": []
+    }
+
+    # 1. Покрываем строку 65 (WKBElement)
+    # Используем валидный WKB для POINT(1 1)
+    valid_wkb = b'\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\xf0?'
+    data_wkb = {**base_data, "location": WKBElement(data=valid_wkb)}
+    obj_wkb = ApartmentRead.model_validate(data_wkb)
+    assert obj_wkb.location.x == 1.0
+
+    # 2. Покрываем строку 66 (WKT String)
+    data_wkt = {**base_data, "location": "POINT(30 60)"}
+    obj_wkt = ApartmentRead.model_validate(data_wkt)
+    assert obj_wkt.location.x == 30.0
+
+    # 3. Покрываем строку 67 (return v)
+    # Передаем уже готовый объект Point. Он не WKB и не строка POINT.
+    data_obj = {**base_data, "location": Point(10, 20)}
+    obj_point = ApartmentRead.model_validate(data_obj)
+    assert obj_point.location.x == 10.0
+
+
+def test_booking_schema_date_equal_validation():
+    """Закрывает BrPart 57->61 в схеме бронирования (валидатор дат)."""
+    # Передаем дату заезда, равную дате выезда
+    data = {
+        "apartment_id": 1,
+        "start_date": date(2026, 1, 20),
+        "end_date": date(2026, 1, 20),
+        "client_id": 1
+    }
+    # Это должно вызвать ошибку валидации и закрыть ветку
+    with pytest.raises(Exception): 
+        BookingCreate(**data)
+
+from datetime import date
+from psycopg.types.range import Range
+from app.schemas.booking import BookingRead, BookingCreate
+
+def test_booking_read_split_range_coverage():
+    """Закрывает переход 57->61 в app/schemas/booking.py."""
+    
+    # Сценарий А: Объекта с периодом НЕТ (закрывает ветку пропуска if)
+    data_no_period = {
+        "id": 1,
+        "landlord_id": 1,
+        "client_id": 1,
+        "apartment_id": 1,
+        "start_date": date(2026, 1, 1),
+        "end_date": date(2026, 1, 2),
+        "cost": 100.0,
+        "booking_status": "confirmed",
+        "payments": []
+    }
+    # Прямая валидация словаря (без атрибута booking_period)
+    obj = BookingRead.model_validate(data_no_period)
+    assert obj.id == 1
+
+    # Сценарий Б: Объект с периодом ЕСТЬ (для полноты)
+    class MockBooking:
+        id = 2
+        landlord_id = 1
+        client_id = 1
+        apartment_id = 1
+        cost = 150.0
+        booking_status = "pending"
+        booking_period = Range(date(2026, 2, 1), date(2026, 2, 5))
+        payments = []
+
+    obj_from_orm = BookingRead.model_validate(MockBooking())
+    assert obj_from_orm.start_date == date(2026, 2, 1)
+
+def test_booking_create_valid():
+    """Тест создания схемы со всеми обязательными полями."""
+    data = {
+        "start_date": date(2026, 1, 1),
+        "end_date": date(2026, 1, 2),
+        "cost": 500.0,
+        "booking_status": "confirmed",
+        "landlord_id": 1,
+        "client_id": 1,
+        "apartment_id": 1
+    }
+    obj = BookingCreate(**data)
+    assert obj.cost == 500.0

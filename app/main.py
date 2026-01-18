@@ -17,6 +17,7 @@ from app.routers import (
     reviews,
     transactions,
     users,
+    chat,
 )
 
 
@@ -69,7 +70,7 @@ app.include_router(balances.router)
 app.include_router(reviews.router)
 app.include_router(owners.router)
 app.include_router(transactions.router)
-
+app.include_router(chat.router, prefix="/chat", tags=["Telegram Bot"])
 
 @app.get("/")
 def root():

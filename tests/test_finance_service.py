@@ -1,10 +1,13 @@
 import pytest
 from decimal import Decimal
 from sqlalchemy import select, func
-from app.models import Transaction, OwnerEarning, Payment, Balance, Landlord
+from app.models import Transaction, OwnerEarning, Payment, Balance, Landlord, Investor, Booking
 from app.models.transaction import TransactionType
-from app.services.finance import FinanceService
 from sqlalchemy.orm import selectinload
+from sqlalchemy import delete, select
+from datetime import datetime, timezone
+from app.services.finance import FinanceService
+
 
 # Эти константы должны быть доступны в тесте (либо импортированы, либо прописаны)
 COMMISSION_RATE = Decimal("0.15") 
@@ -103,3 +106,57 @@ async def test_finance_distribution_logic(
     assert balance_map[mock_landlord_profile.id] == landlord_amount
     assert balance_map[mock_owner_profile.id] == remaining_profit
     assert balance_map[mock_investor_profile.id] == investor_pool
+
+@pytest.mark.asyncio
+async def test_finance_full_coverage_scenarios(db_session, created_booking):
+    """
+    Закрывает строки 128-134 (создание баланса) и 64 (отсутствие инвесторов).
+    """
+    # 1. Обеспечиваем выполнение условия is_fully_paid
+    # Создаем платеж на полную стоимость (1000.0)
+    full_payment = Payment(
+        booking_id=created_booking.id,
+        amount=created_booking.cost,
+        payment_status="paid",
+        payment_date=datetime.now(timezone.utc)
+    )
+    db_session.add(full_payment)
+    
+    # 2. Убираем инвесторов, чтобы покрыть строку 64 (if not investors: return)
+    await db_session.execute(delete(Investor))
+    
+    # 3. Подгружаем лендлорда и удаляем его баланс для покрытия строк 128-134
+    stmt = (
+        select(Booking)
+        .options(selectinload(Booking.landlord))
+        .where(Booking.id == created_booking.id)
+    )
+    res = await db_session.execute(stmt)
+    booking = res.scalar_one()
+    
+    # Удаляем существующий баланс
+    await db_session.execute(
+        delete(Balance).where(Balance.user_id == booking.landlord.user_id)
+    )
+    await db_session.commit()
+
+    # 4. Запускаем сервис
+    service = FinanceService(db_session)
+    await service.process_booking_completion(booking.id)
+
+    # 5. Проверка покрытия и результата
+    # Проверяем, что баланс создался (строка 128)
+    res_balance = await db_session.execute(
+        select(Balance).where(Balance.user_id == booking.landlord.user_id)
+    )
+    new_balance = res_balance.scalar_one_or_none()
+    
+    assert new_balance is not None
+    assert new_balance.current_balance > 0
+
+@pytest.mark.asyncio
+async def test_process_booking_unpaid_raises_error(db_session, created_booking):
+    service = FinanceService(db_session)
+    # Убеждаемся, что платежей нет (is_fully_paid будет False)
+    with pytest.raises(ValueError, match="Бронирование не оплачено полностью"):
+        await service.process_booking_completion(created_booking.id)

@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from app.models.transaction import Transaction
     from app.models.investor import Investor
     from app.models.owner_earning import OwnerEarning
+    from app.models.message import Message
 
 class User(Base):
     __tablename__ = "user"
@@ -39,6 +40,8 @@ class User(Base):
     # ИСТОРИЯ (One-to-Many)
     wallet_history: Mapped[list["Transaction"]] = relationship(back_populates="user")
     owner_earnings: Mapped[list["OwnerEarning"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    # Коллекция всех сообщений, которые отправил этот пользователь
+    sent_messages: Mapped[list["Message"]] = relationship(back_populates="sender")
     
     def __repr__(self) -> str:
         return f"User(id={self.id}, email='{self.email}')"

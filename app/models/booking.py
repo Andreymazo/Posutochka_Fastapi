@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from app.models.review import Review
     from app.models.transaction import Transaction
     from app.models.owner_earning import OwnerEarning
+    from app.models.message import Message
 
 class Booking(Base):
     """
@@ -67,7 +68,9 @@ class Booking(Base):
     reviews: Mapped[List["Review"]] = relationship(back_populates="booking", cascade="all, delete-orphan")
     payments: Mapped[List["Payment"]] = relationship(back_populates="booking", cascade="all, delete-orphan")
     transactions: Mapped[List["Transaction"]] = relationship(back_populates="booking", cascade="all, delete-orphan")
-    
+    messages: Mapped[list["Message"]] = relationship(back_populates="booking",cascade="all, delete-orphan" 
+    # Если удалим бронь — удаляются все сообщения
+    )
 
     # --- ГИБРИДНЫЕ СВОЙСТВА И ЛОГИКА ---
 

@@ -98,22 +98,6 @@ class FinanceService:
                     tx_type=TransactionType.OWNER_DIVIDEND # <-- Используется здесь
                 )
 
-    # async def _add_money(self, user_id: int, amount: Decimal, booking_id: int, tx_type: TransactionType):
-    #     """Низкоуровневое начисление на баланс с записью транзакции."""
-    #     res = await self.session.execute(select(Balance).where(Balance.user_id == user_id))
-    #     balance = res.scalar_one()
-
-    #     transaction = Transaction(
-    #         amount=amount,
-    #         # Тип транзакции, который мы пробрасываем через параметр
-    #         transaction_type=tx_type, 
-    #         user_id=user_id,
-    #         booking_id=booking_id,
-    #         balance_id=balance.id
-    #     )
-    #     self.session.add(transaction)
-
-    #     balance.current_balance += amount
     async def _add_money(self, user_id: int, amount: Decimal, booking_id: int, tx_type: TransactionType):
         """Низкоуровневое начисление на баланс с записью транзакции."""
         
