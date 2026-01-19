@@ -18,7 +18,7 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_asyn
     """Принимает обновления от Telegram API."""
     data = await request.json()
      # ДОБАВЬТЕ ЭТО: теперь вы увидите в консоли всё, что прислал Телеграм
-    # print(f"DEBUG: Входящие данные: {data}") 
+    print(f"DEBUG: Входящие данные: {data}") 
 
     if "message" in data and data["message"].get("text") == "/start":
         tg_id = data["message"]["from"]["id"]
@@ -54,15 +54,17 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_asyn
         result = await db.execute(
             select(Message).where(Message.tg_message_id == original_tg_id)
         )
-        original_msg = result.scalar_one_or_none()
+        # original_msg = result.scalar_one_or_none()
+        original_msg = result.scalars().first()
 
         if original_msg:
             # 2. Ищем нашего пользователя в БД по tg_user_id
             user_result = await db.execute(
-                select(User).where(User.tg_user_id == tg_user_id)
+                select(User).where(User.telegram_id == tg_user_id)
             )
-            sender = user_result.scalar_one_or_none()
-
+            # sender = user_result.scalar_one_or_none()
+            sender = user_result.scalars().first()
+    
             if sender:
                 # 3. Сохраняем ответ в базу данных
                 new_message = Message(

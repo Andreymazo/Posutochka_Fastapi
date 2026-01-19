@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import DateTime, Integer, String, func
+from sqlalchemy import DateTime, Integer, String, func, BigInteger
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -42,7 +42,9 @@ class User(Base):
     owner_earnings: Mapped[list["OwnerEarning"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     # Коллекция всех сообщений, которые отправил этот пользователь
     sent_messages: Mapped[list["Message"]] = relationship(back_populates="sender")
-    
+    # Добавьте это:
+    telegram_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, nullable=True)
+
     def __repr__(self) -> str:
         return f"User(id={self.id}, email='{self.email}')"
 
