@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
-
-from sqlalchemy import DateTime, Integer, String, func, BigInteger
+from decimal import Decimal
+from sqlalchemy import DateTime, Integer, String, func, BigInteger, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from app.models.investor import Investor
     from app.models.owner_earning import OwnerEarning
     from app.models.message import Message
+    from app.models.coins_transaction import CoinsTransaction
+
 
 class User(Base):
     __tablename__ = "user"
@@ -44,7 +46,9 @@ class User(Base):
     sent_messages: Mapped[list["Message"]] = relationship(back_populates="sender")
     # Добавьте это:
     telegram_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, nullable=True)
-
+    coins_balance: Mapped[Decimal] = mapped_column(Numeric(10, 2), server_default="0.00")
+    coins_transactions: Mapped[list["CoinsTransaction"]] = relationship(back_populates="user")
+    
     def __repr__(self) -> str:
         return f"User(id={self.id}, email='{self.email}')"
 

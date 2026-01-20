@@ -18,7 +18,8 @@ if TYPE_CHECKING:
     from app.models.transaction import Transaction
     from app.models.owner_earning import OwnerEarning
     from app.models.message import Message
-
+    from app.models.coins_transaction import CoinsTransaction
+    
 class Booking(Base):
     """
     Модель Бронирования — центральный узел системы 'Посуточка'.
@@ -71,6 +72,9 @@ class Booking(Base):
     messages: Mapped[list["Message"]] = relationship(back_populates="booking",cascade="all, delete-orphan" 
     # Если удалим бронь — удаляются все сообщения
     )
+    # Связь с транзакциями коинов
+    # Это позволит вам делать: booking.coin_transactions
+    coin_transactions: Mapped[list["CoinsTransaction"]] = relationship(back_populates="booking")
 
     # --- ГИБРИДНЫЕ СВОЙСТВА И ЛОГИКА ---
 

@@ -27,7 +27,7 @@ class TelegramService:
             logger.error("TELEGRAM_BOT_TOKEN не установлен в окружении!")
             return None
 
-        url = f"https://api.telegram.org{TELEGRAM_BOT_TOKEN}/sendMessage"
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         payload = {
             "chat_id": tg_user_id,
             "text": text,

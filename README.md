@@ -281,3 +281,24 @@ lt --port 8000 --subdomain tough-zoos-drive
     Кнопки (Inline Keyboard): Добавить арендодателю кнопки прямо в Telegram: [✅ Подтвердить] и [❌ Отказать], чтобы ему не нужно было писать текст вручную.
 
 Какую фичу внедряем следующей?
+
+https://api.telegram.org/bot8508648552:AAGhEs_7LhZT7qFyPZCk39gONvOpZ1dcRL0/getWebhookInfo
+https://api.telegram.org/botмойтокен/setWebhook?url=https://legal-breads-grow.loca.lt/chat/
+https://api.telegram.org/bot8508648552:AAGhEs_7LhZT7qFyPZCk39gONvOpZ1dcRL0/deleteWebhook?drop_pending_updates=true
+
+Пинги
+___________________________________
+ssh -p 443 -R0:localhost:8000 a.pinggy.io
+ssh -p 443 -R0:localhost:8000 a.pinggy.io
+The authenticity of host '[a.pinggy.io]:443 ([172.233.242.88]:443)' can't be established.
+RSA key fingerprint is SHA256:nFd5rfJMGuZXvfeRzJ/BtT3TfksAxTWMajcrHRcI7AM.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? 
+ Your tunnel will expire in 60 minutes. Upgrade to Pinggy Pro to get unrestricted tunnels. https://dashboard.pinggy.io
+
+
+   http://saojz-95-24-30-141.a.free.pinggy.link
+   https://saojz-95-24-30-141.a.free.pinggy.link
+   https://api.telegram.org/bot8508648552:AAGhEs_7LhZT7qFyPZCk39gONvOpZ1dcRL0/setWebhook?url=https://saojz-95-24-30-141.a.free.pinggy.link
+    
+    https://api.telegram.org/bot8508648552:AAGhEs_7LhZT7qFyPZCk39gONvOpZ1dcRL0/getWebhookInfo
