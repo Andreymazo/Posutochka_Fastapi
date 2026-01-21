@@ -69,6 +69,8 @@ ignore = [
 "tests/**/*.py" = [
     "ARG",     # allow unused arguments in tests (fixtures)
     "PT019",   # allow lifespan function parameter pattern
+    "RUF001",  # allow ambiguous unicode characters in strings (Russian text)
+    "RUF002",  # allow ambiguous unicode characters in docstrings (Russian docs)
 ]
 
 
