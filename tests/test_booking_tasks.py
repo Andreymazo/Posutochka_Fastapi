@@ -1,17 +1,18 @@
 """Tests for Booking Tasks."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from decimal import Decimal
-from datetime import date
-from sqlalchemy.dialects.postgresql import Range
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models import Booking, Message, User
 from app.services.booking_tasks import send_booking_notification
-from app.models import Booking, Landlord, User, Apartment, Message
 
 
 @pytest.mark.asyncio
-async def test_send_booking_notification_success(created_booking: Booking, db_session: AsyncSession):
+async def test_send_booking_notification_success(
+    created_booking: Booking, db_session: AsyncSession
+):
     """Тест успешной отправки уведомления о бронировании."""
     # Подготовка: устанавливаем telegram_id для арендодателя
     landlord_user = await db_session.get(User, created_booking.landlord.user_id)
@@ -21,7 +22,9 @@ async def test_send_booking_notification_success(created_booking: Booking, db_se
     booking_id = created_booking.id
 
     # Мокируем TelegramService.send_message
-    with patch('app.services.booking_tasks.TelegramService.send_message', new_callable=AsyncMock) as mock_send:
+    with patch(
+        "app.services.booking_tasks.TelegramService.send_message", new_callable=AsyncMock
+    ) as mock_send:
         mock_send.return_value = 777  # message_id в Telegram
 
         # Выполнение
@@ -30,21 +33,20 @@ async def test_send_booking_notification_success(created_booking: Booking, db_se
         # Проверки отправки сообщения
         mock_send.assert_called_once()
         call_args = mock_send.call_args
-        assert call_args[1]['tg_user_id'] == 123456789
-        assert "Новая бронь" in call_args[1]['text']
-        assert str(created_booking.apartment_id) in call_args[1]['text']
-        assert str(created_booking.cost) in call_args[1]['text']
+        assert call_args[1]["tg_user_id"] == 123456789
+        assert "Новая бронь" in call_args[1]["text"]
+        assert str(created_booking.apartment_id) in call_args[1]["text"]
+        assert str(created_booking.cost) in call_args[1]["text"]
 
     # Проверяем, что сообщение сохранено в БД
     # Используем новую сессию для проверки (как в реальной фоновой задаче)
     from app.database import AsyncSessionLocal
+
     async with AsyncSessionLocal() as new_session:
         from sqlalchemy import select
+
         result = await new_session.execute(
-            select(Message).where(
-                Message.booking_id == booking_id,
-                Message.tg_message_id == 777
-            )
+            select(Message).where(Message.booking_id == booking_id, Message.tg_message_id == 777)
         )
         saved_message = result.scalar_one_or_none()
 
@@ -62,7 +64,9 @@ async def test_send_booking_notification_no_booking(db_session: AsyncSession):
     booking_id = 99999
 
     # Мокируем TelegramService
-    with patch('app.services.booking_tasks.TelegramService.send_message', new_callable=AsyncMock) as mock_send:
+    with patch(
+        "app.services.booking_tasks.TelegramService.send_message", new_callable=AsyncMock
+    ) as mock_send:
         # Выполнение
         await send_booking_notification(booking_id)
 
@@ -71,7 +75,9 @@ async def test_send_booking_notification_no_booking(db_session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_send_booking_notification_no_telegram_id(created_booking: Booking, db_session: AsyncSession):
+async def test_send_booking_notification_no_telegram_id(
+    created_booking: Booking, db_session: AsyncSession
+):
     """Тест обработки случая, когда у арендодателя нет telegram_id."""
     # Подготовка: убеждаемся, что telegram_id = None
     landlord_user = await db_session.get(User, created_booking.landlord.user_id)
@@ -81,7 +87,9 @@ async def test_send_booking_notification_no_telegram_id(created_booking: Booking
     booking_id = created_booking.id
 
     # Мокируем TelegramService
-    with patch('app.services.booking_tasks.TelegramService.send_message', new_callable=AsyncMock) as mock_send:
+    with patch(
+        "app.services.booking_tasks.TelegramService.send_message", new_callable=AsyncMock
+    ) as mock_send:
         # Выполнение
         await send_booking_notification(booking_id)
 
@@ -90,7 +98,9 @@ async def test_send_booking_notification_no_telegram_id(created_booking: Booking
 
 
 @pytest.mark.asyncio
-async def test_send_booking_notification_telegram_fails(created_booking: Booking, db_session: AsyncSession):
+async def test_send_booking_notification_telegram_fails(
+    created_booking: Booking, db_session: AsyncSession
+):
     """Тест обработки ошибки отправки в Telegram."""
     # Подготовка
     landlord_user = await db_session.get(User, created_booking.landlord.user_id)
@@ -100,7 +110,9 @@ async def test_send_booking_notification_telegram_fails(created_booking: Booking
     booking_id = created_booking.id
 
     # Мокируем TelegramService с ошибкой (возвращает None)
-    with patch('app.services.booking_tasks.TelegramService.send_message', new_callable=AsyncMock) as mock_send:
+    with patch(
+        "app.services.booking_tasks.TelegramService.send_message", new_callable=AsyncMock
+    ) as mock_send:
         mock_send.return_value = None  # Ошибка отправки
 
         # Выполнение
@@ -111,11 +123,11 @@ async def test_send_booking_notification_telegram_fails(created_booking: Booking
 
     # Проверяем, что сообщение НЕ сохранено в БД (из-за проверки if tg_msg_id)
     from app.database import AsyncSessionLocal
+
     async with AsyncSessionLocal() as new_session:
         from sqlalchemy import select
-        result = await new_session.execute(
-            select(Message).where(Message.booking_id == booking_id)
-        )
+
+        result = await new_session.execute(select(Message).where(Message.booking_id == booking_id))
         # Не должно быть новых сообщений, связанных с этим бронированием
         # (кроме возможных существующих)
         messages = result.scalars().all()
@@ -124,7 +136,9 @@ async def test_send_booking_notification_telegram_fails(created_booking: Booking
 
 
 @pytest.mark.asyncio
-async def test_send_booking_notification_with_apartment_details(created_booking: Booking, db_session: AsyncSession):
+async def test_send_booking_notification_with_apartment_details(
+    created_booking: Booking, db_session: AsyncSession
+):
     """Тест проверки включения деталей апартаментов в уведомление."""
     # Подготовка
     landlord_user = await db_session.get(User, created_booking.landlord.user_id)
@@ -134,7 +148,9 @@ async def test_send_booking_notification_with_apartment_details(created_booking:
     booking_id = created_booking.id
 
     # Мокируем TelegramService
-    with patch('app.services.booking_tasks.TelegramService.send_message', new_callable=AsyncMock) as mock_send:
+    with patch(
+        "app.services.booking_tasks.TelegramService.send_message", new_callable=AsyncMock
+    ) as mock_send:
         mock_send.return_value = 888
 
         # Выполнение
@@ -142,7 +158,7 @@ async def test_send_booking_notification_with_apartment_details(created_booking:
 
         # Проверки содержимого сообщения
         call_args = mock_send.call_args
-        message_text = call_args[1]['text']
+        message_text = call_args[1]["text"]
 
         assert "Новая бронь" in message_text
         assert f"Объект ID: {created_booking.apartment_id}" in message_text
@@ -151,7 +167,9 @@ async def test_send_booking_notification_with_apartment_details(created_booking:
 
 
 @pytest.mark.asyncio
-async def test_send_booking_notification_message_is_read_flag(created_booking: Booking, db_session: AsyncSession):
+async def test_send_booking_notification_message_is_read_flag(
+    created_booking: Booking, db_session: AsyncSession
+):
     """Тест проверки флага is_read для сохраненного сообщения."""
     # Подготовка
     landlord_user = await db_session.get(User, created_booking.landlord.user_id)
@@ -161,7 +179,9 @@ async def test_send_booking_notification_message_is_read_flag(created_booking: B
     booking_id = created_booking.id
 
     # Мокируем TelegramService
-    with patch('app.services.booking_tasks.TelegramService.send_message', new_callable=AsyncMock) as mock_send:
+    with patch(
+        "app.services.booking_tasks.TelegramService.send_message", new_callable=AsyncMock
+    ) as mock_send:
         mock_send.return_value = 999
 
         # Выполнение
@@ -169,13 +189,12 @@ async def test_send_booking_notification_message_is_read_flag(created_booking: B
 
     # Проверяем флаг is_read
     from app.database import AsyncSessionLocal
+
     async with AsyncSessionLocal() as new_session:
         from sqlalchemy import select
+
         result = await new_session.execute(
-            select(Message).where(
-                Message.booking_id == booking_id,
-                Message.tg_message_id == 999
-            )
+            select(Message).where(Message.booking_id == booking_id, Message.tg_message_id == 999)
         )
         saved_message = result.scalar_one_or_none()
 
@@ -184,7 +203,9 @@ async def test_send_booking_notification_message_is_read_flag(created_booking: B
 
 
 @pytest.mark.asyncio
-async def test_send_booking_notification_sender_id_is_landlord(created_booking: Booking, db_session: AsyncSession):
+async def test_send_booking_notification_sender_id_is_landlord(
+    created_booking: Booking, db_session: AsyncSession
+):
     """Тест проверки, что sender_id сообщения - это ID пользователя арендодателя."""
     # Подготовка
     landlord_user = await db_session.get(User, created_booking.landlord.user_id)
@@ -195,7 +216,9 @@ async def test_send_booking_notification_sender_id_is_landlord(created_booking: 
     booking_id = created_booking.id
 
     # Мокируем TelegramService
-    with patch('app.services.booking_tasks.TelegramService.send_message', new_callable=AsyncMock) as mock_send:
+    with patch(
+        "app.services.booking_tasks.TelegramService.send_message", new_callable=AsyncMock
+    ) as mock_send:
         mock_send.return_value = 1111
 
         # Выполнение
@@ -203,13 +226,12 @@ async def test_send_booking_notification_sender_id_is_landlord(created_booking: 
 
     # Проверяем sender_id в сохраненном сообщении
     from app.database import AsyncSessionLocal
+
     async with AsyncSessionLocal() as new_session:
         from sqlalchemy import select
+
         result = await new_session.execute(
-            select(Message).where(
-                Message.booking_id == booking_id,
-                Message.tg_message_id == 1111
-            )
+            select(Message).where(Message.booking_id == booking_id, Message.tg_message_id == 1111)
         )
         saved_message = result.scalar_one_or_none()
 
@@ -218,7 +240,9 @@ async def test_send_booking_notification_sender_id_is_landlord(created_booking: 
 
 
 @pytest.mark.asyncio
-async def test_send_booking_notification_uses_new_session(created_booking: Booking, db_session: AsyncSession):
+async def test_send_booking_notification_uses_new_session(
+    created_booking: Booking, db_session: AsyncSession
+):
     """Тест проверки, что функция использует новую сессию AsyncSessionLocal."""
     # Подготовка
     landlord_user = await db_session.get(User, created_booking.landlord.user_id)
@@ -228,14 +252,19 @@ async def test_send_booking_notification_uses_new_session(created_booking: Booki
     booking_id = created_booking.id
 
     # Мокируем TelegramService и AsyncSessionLocal
-    with patch('app.services.booking_tasks.TelegramService.send_message', new_callable=AsyncMock) as mock_send:
+    with patch(
+        "app.services.booking_tasks.TelegramService.send_message", new_callable=AsyncMock
+    ) as mock_send:
         mock_send.return_value = 2222
 
         # Мокируем создание новой сессии для проверки, что используется AsyncSessionLocal
-        with patch('app.services.booking_tasks.AsyncSessionLocal') as mock_session_factory:
+        with patch("app.services.booking_tasks.AsyncSessionLocal") as mock_session_factory:
             # Настраиваем мок так, чтобы он возвращал реальную сессию
             from app.database import AsyncSessionLocal as RealSessionLocal
-            mock_session_factory.return_value.__aenter__.return_value = await RealSessionLocal().__aenter__()
+
+            mock_session_factory.return_value.__aenter__.return_value = (
+                await RealSessionLocal().__aenter__()
+            )
 
             # Выполнение
             await send_booking_notification(booking_id)

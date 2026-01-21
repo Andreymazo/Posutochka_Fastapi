@@ -1,10 +1,12 @@
 """Tests for Chat Service."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models import Booking, User
 from app.services.chat_service import ChatService
-from app.models import Message, Booking, Landlord, User
 
 
 @pytest.mark.asyncio
@@ -21,7 +23,9 @@ async def test_save_and_notify_success(db_session: AsyncSession, created_booking
     await db_session.commit()
 
     # Мокируем TelegramService
-    with patch('app.services.chat_service.TelegramService.send_message', new_callable=AsyncMock) as mock_send:
+    with patch(
+        "app.services.chat_service.TelegramService.send_message", new_callable=AsyncMock
+    ) as mock_send:
         mock_send.return_value = 999  # message_id в Telegram
 
         # Выполнение
@@ -37,9 +41,9 @@ async def test_save_and_notify_success(db_session: AsyncSession, created_booking
         # Проверяем, что send_message был вызван с правильными параметрами
         mock_send.assert_called_once()
         call_args = mock_send.call_args
-        assert call_args[1]['tg_user_id'] == 123456789
-        assert f"Бронь #{booking_id}" in call_args[1]['text']
-        assert text in call_args[1]['text']
+        assert call_args[1]["tg_user_id"] == 123456789
+        assert f"Бронь #{booking_id}" in call_args[1]["text"]
+        assert text in call_args[1]["text"]
 
 
 @pytest.mark.asyncio
@@ -56,7 +60,9 @@ async def test_save_and_notify_no_telegram_id(db_session: AsyncSession, created_
     await db_session.commit()
 
     # Мокируем TelegramService (не должен быть вызван)
-    with patch('app.services.chat_service.TelegramService.send_message', new_callable=AsyncMock) as mock_send:
+    with patch(
+        "app.services.chat_service.TelegramService.send_message", new_callable=AsyncMock
+    ) as mock_send:
         # Выполнение
         result = await ChatService.save_and_notify(db_session, booking_id, sender_id, text)
 
@@ -80,7 +86,9 @@ async def test_save_and_notify_booking_not_found(db_session: AsyncSession, creat
     text = "Сообщение для несуществующей брони"
 
     # Мокируем TelegramService
-    with patch('app.services.chat_service.TelegramService.send_message', new_callable=AsyncMock) as mock_send:
+    with patch(
+        "app.services.chat_service.TelegramService.send_message", new_callable=AsyncMock
+    ) as mock_send:
         # Выполнение
         result = await ChatService.save_and_notify(db_session, booking_id, sender_id, text)
 
@@ -96,7 +104,9 @@ async def test_save_and_notify_booking_not_found(db_session: AsyncSession, creat
 
 
 @pytest.mark.asyncio
-async def test_save_and_notify_telegram_service_fails(db_session: AsyncSession, created_booking: Booking):
+async def test_save_and_notify_telegram_service_fails(
+    db_session: AsyncSession, created_booking: Booking
+):
     """Тест обработки ошибки отправки в Telegram."""
     # Подготовка
     booking_id = created_booking.id
@@ -109,7 +119,9 @@ async def test_save_and_notify_telegram_service_fails(db_session: AsyncSession, 
     await db_session.commit()
 
     # Мокируем TelegramService с ошибкой (возвращает None)
-    with patch('app.services.chat_service.TelegramService.send_message', new_callable=AsyncMock) as mock_send:
+    with patch(
+        "app.services.chat_service.TelegramService.send_message", new_callable=AsyncMock
+    ) as mock_send:
         mock_send.return_value = None  # Ошибка отправки
 
         # Выполнение
@@ -138,7 +150,9 @@ async def test_save_and_notify_with_html_text(db_session: AsyncSession, created_
     await db_session.commit()
 
     # Мокируем TelegramService
-    with patch('app.services.chat_service.TelegramService.send_message', new_callable=AsyncMock) as mock_send:
+    with patch(
+        "app.services.chat_service.TelegramService.send_message", new_callable=AsyncMock
+    ) as mock_send:
         mock_send.return_value = 888
 
         # Выполнение
@@ -151,11 +165,13 @@ async def test_save_and_notify_with_html_text(db_session: AsyncSession, created_
 
         # Проверяем что HTML теги сохранились в тексте сообщения
         call_args = mock_send.call_args
-        assert text in call_args[1]['text']
+        assert text in call_args[1]["text"]
 
 
 @pytest.mark.asyncio
-async def test_save_and_notify_multiple_messages(db_session: AsyncSession, created_booking: Booking):
+async def test_save_and_notify_multiple_messages(
+    db_session: AsyncSession, created_booking: Booking
+):
     """Тест отправки нескольких сообщений для одного бронирования."""
     # Подготовка
     booking_id = created_booking.id
@@ -167,14 +183,16 @@ async def test_save_and_notify_multiple_messages(db_session: AsyncSession, creat
     await db_session.commit()
 
     # Мокируем TelegramService
-    with patch('app.services.chat_service.TelegramService.send_message', new_callable=AsyncMock) as mock_send:
+    with patch(
+        "app.services.chat_service.TelegramService.send_message", new_callable=AsyncMock
+    ) as mock_send:
         mock_send.side_effect = [101, 102, 103]  # Разные message_id
 
         # Отправляем 3 сообщения
         messages = []
         for i in range(3):
             msg = await ChatService.save_and_notify(
-                db_session, booking_id, sender_id, f"Сообщение {i+1}"
+                db_session, booking_id, sender_id, f"Сообщение {i + 1}"
             )
             messages.append(msg)
 
