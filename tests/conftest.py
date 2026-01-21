@@ -17,7 +17,7 @@ from decimal import Decimal
 from app.main import app
 
 # Используем psycopg3 для асинхронного PostgreSQL
-DATABASE_URL = "postgresql+psycopg://postgres:123456@localhost:5433/posutochka"
+DATABASE_URL = "postgresql+psycopg://postgres:123456@localhost:5432/posutochka"
 
 engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncTestingSessionLocal = async_sessionmaker(
