@@ -19,6 +19,9 @@ dev = [
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+exclude = [
+    "ai_coverage_fixer.py",  # Helper script, not part of application code
+]
 
 [tool.ruff.lint]
 select = [

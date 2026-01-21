@@ -1,8 +1,9 @@
 import asyncio
 import uuid
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from datetime import date
-from typing import Any, Callable
+from decimal import Decimal
+from typing import Any
 
 import pytest
 import pytest_asyncio
@@ -10,11 +11,11 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import Range
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from app.database import get_async_db
-from app.models import Apartment, Balance, Booking, Client, Landlord, User, Investor, Owner
-from app.models.base import Base
-from decimal import Decimal
 from app.main import app
+from app.models import Apartment, Balance, Booking, Client, Investor, Landlord, Owner, User
+from app.models.base import Base
 
 # Используем psycopg3 для асинхронного PostgreSQL
 DATABASE_URL = "postgresql+psycopg://postgres:123456@localhost:5432/posutochka"
@@ -55,27 +56,27 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
         transaction = await connection.begin()
         # Создаем сессию, привязанную к этому соединению
         async with AsyncSession(bind=connection, expire_on_commit=False) as session:
-            
+
             # ВАЖНО: Подменяем зависимость в FastAPI, чтобы роутеры использовали эту же сессию
             app.dependency_overrides[get_async_db] = lambda: session
-            
+
             yield session
-            
+
             # Закрываем сессию
             await session.close()
-        
-        # Откатываем транзакцию — все изменения (INSERT/UPDATE), 
+
+        # Откатываем транзакцию — все изменения (INSERT/UPDATE),
         # сделанные и в тесте, и внутри роутеров API, исчезнут.
         await transaction.rollback()
-        
+
     # Чистим переопределения после теста
     app.dependency_overrides.clear()
 
 @pytest_asyncio.fixture(scope="function")
 async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     """
-    Асинхронный клиент FastAPI. 
-    Логика подмены БД уже реализована в фикстуре db_session, 
+    Асинхронный клиент FastAPI.
+    Логика подмены БД уже реализована в фикстуре db_session,
     здесь мы просто создаем сам клиент.
     """
     async with AsyncClient(
@@ -134,7 +135,7 @@ def sample_user_data_factory() -> Callable[[], dict[str, Any]]:
         unique_suffix = uuid.uuid4().hex[:8] # Увеличим длину для надежности
         return {
             "email": f"user_{unique_suffix}@example.com",
-            "phone_number": f"+7999{str(uuid.uuid4().int)[:8]}", 
+            "phone_number": f"+7999{str(uuid.uuid4().int)[:8]}",
             "password_hash": "secure_hash_2026",
             "telegram_username": f"tg_user_{unique_suffix}",
         }
@@ -334,19 +335,19 @@ def sample_apartment_data(created_landlord: Any) -> dict[str, Any]:
 
 @pytest.fixture
 async def mock_owner_profile(
-    db_session: AsyncSession, 
-    sample_user_data_factory  
+    db_session: AsyncSession,
+    sample_user_data_factory
 ) -> User:
     """Создает профиль Владельца с уникальными данными и балансом."""
     # 1. Создаем User напрямую
     user = User(**sample_user_data_factory())
     db_session.add(user)
     await db_session.flush()
-    
+
     # 2. Добавляем роль Владельца (100% доля) и нулевой баланс
     owner_role = Owner(user_id=user.id, current_share=Decimal("1.0000"), is_active=True)
     balance = Balance(user_id=user.id, current_balance=Decimal("0.00"))
-    
+
     db_session.add_all([owner_role, balance])
     await db_session.flush()
     return user
@@ -359,15 +360,15 @@ async def mock_investor_profile(
     user = User(**sample_user_data_factory())
     db_session.add(user)
     await db_session.flush()
-    
+
     # Инвестор с вложением 10 000 и нулевым возвратом на старте
     investor_role = Investor(
-        user_id=user.id, 
-        investment_amount=Decimal("10000.00"), 
+        user_id=user.id,
+        investment_amount=Decimal("10000.00"),
         returned_amount=Decimal("0.00")
     )
     balance = Balance(user_id=user.id, current_balance=Decimal("0.00"))
-    
+
     db_session.add_all([investor_role, balance])
     await db_session.flush()
     return user
@@ -381,10 +382,10 @@ async def mock_landlord_profile(
     user = User(**sample_user_data_factory())
     db_session.add(user)
     await db_session.flush()
-    
+
     landlord_role = Landlord(user_id=user.id, first_name="Test", last_name="Landlord")
     balance = Balance(user_id=user.id, current_balance=Decimal("0.00"))
-    
+
     db_session.add_all([landlord_role, balance])
     await db_session.flush()
     return user
@@ -398,10 +399,10 @@ async def mock_client_profile(
     user = User(**sample_user_data_factory())
     db_session.add(user)
     await db_session.flush()
-    
+
     client_role = Client(user_id=user.id, first_name="Test", last_name="Client")
     balance = Balance(user_id=user.id, current_balance=Decimal("0.00"))
-    
+
     db_session.add_all([client_role, balance])
     await db_session.flush()
     return user
