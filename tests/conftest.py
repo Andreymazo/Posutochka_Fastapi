@@ -18,7 +18,7 @@ from app.models import Apartment, Balance, Booking, Client, Investor, Landlord, 
 from app.models.base import Base
 
 # Используем psycopg3 для асинхронного PostgreSQL
-DATABASE_URL = "postgresql+psycopg://postgres:123456@localhost:5432/posutochka"
+DATABASE_URL = "postgresql+psycopg://postgres:123456@localhost:5433/posutochka"
 
 engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncTestingSessionLocal = async_sessionmaker(
@@ -406,3 +406,13 @@ async def mock_client_profile(
     db_session.add_all([client_role, balance])
     await db_session.flush()
     return user
+from app.celery_app import celery_app
+
+# Эта фикстура включит синхронный режим для ВСЕХ тестов
+@pytest.fixture(scope="session", autouse=True)
+def configure_celery_for_tests():
+    celery_app.conf.update(
+        task_always_eager=True,     # Задачи выполняются сразу
+        task_eager_propagates=True, # Ошибки в задачах будут видны в тестах
+        broker_url="memory://",     # Имитация брокера в памяти
+    )

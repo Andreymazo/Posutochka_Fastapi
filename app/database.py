@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 load_dotenv()
 
 # Database URL from environment variable or default
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:123456@localhost:5432/posutochka")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:123456@localhost:5433/posutochka")
 
 # Convert sync DATABASE_URL to async for AsyncEngine
 # Replace postgresql:// or postgres:// with postgresql+psycopg://

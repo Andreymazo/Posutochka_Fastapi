@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Optional
 from datetime import datetime
 from decimal import Decimal
-from sqlalchemy import ForeignKey, Integer, String, DateTime, Numeric, func
+from sqlalchemy import ForeignKey, Integer, String, DateTime, Numeric, func, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -16,33 +16,24 @@ class CoinsTransaction(Base):
     CoinsTransaction model - represents a single change in user's coin balance.
     Universal for the whole ecosystem (source_app).
     """
-
     __tablename__ = "coins_transaction"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    
-    # Сумма транзакции (может быть положительной для кэшбэка и отрицательной для оплаты)
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    
-    # Источник транзакции (например: 'posutochka', 'cleaning', 'referral_system')
     source_app: Mapped[str] = mapped_column(String(50), server_default="posutochka", nullable=False)
-    
-    # Описание транзакции для пользователя (например: "Кэшбэк за бронирование #55")
     description: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    # Срок жизни бонусов
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, server_default="true", nullable=False)
 
-    # Foreign keys
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), index=True, nullable=False)
-    # Связь с бронированием опциональна (нужна только для кэшбэка в Посуточке)
     booking_id: Mapped[Optional[int]] = mapped_column(ForeignKey("booking.id"), nullable=True)
-
-    # Relationships
+    
+    # ИСПОЛЬЗУЙ СТРОКУ "Booking" вместо ссылки на класс, чтобы избежать ошибки маппера
+    booking: Mapped[Optional["Booking"]] = relationship("Booking", back_populates="coin_transactions") 
     user: Mapped["User"] = relationship(back_populates="coins_transactions")
-    booking: Mapped[Optional["Booking"]] = relationship()
-
     def __repr__(self) -> str:
         return f"CoinsTransaction(id={self.id}, amount={self.amount}, user_id={self.user_id})"
 

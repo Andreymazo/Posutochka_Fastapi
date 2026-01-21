@@ -302,3 +302,10 @@ Are you sure you want to continue connecting (yes/no/[fingerprint])?
    https://api.telegram.org/bot8508648552:AAGhEs_7LhZT7qFyPZCk39gONvOpZ1dcRL0/setWebhook?url=https://saojz-95-24-30-141.a.free.pinggy.link
     
     https://api.telegram.org/bot8508648552:AAGhEs_7LhZT7qFyPZCk39gONvOpZ1dcRL0/getWebhookInfo
+
+docker run -d --name redis-posutochka -p 6379:6379 redis:7-alpine
+docker pull redis:7-alpine
+sudo apt update
+sudo apt install redis-server -y
+sudo systemctl start redis-server
+sudo systemctl enable redis-server
