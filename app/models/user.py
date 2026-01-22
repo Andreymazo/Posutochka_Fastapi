@@ -16,7 +16,8 @@ if TYPE_CHECKING:
     from app.models.owner_earning import OwnerEarning
     from app.models.message import Message
     from app.models.coins_transaction import CoinsTransaction
-
+    from app.models.document import Document
+    
 
 class User(Base):
     __tablename__ = "user"
@@ -48,7 +49,9 @@ class User(Base):
     telegram_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, nullable=True)
     coins_balance: Mapped[Decimal] = mapped_column(Numeric(10, 2), server_default="0.00")
     coins_transactions: Mapped[list["CoinsTransaction"]] = relationship(back_populates="user")
-    
+    # Связь с документами
+    documents: Mapped[list["Document"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+
     def __repr__(self) -> str:
         return f"User(id={self.id}, email='{self.email}')"
 

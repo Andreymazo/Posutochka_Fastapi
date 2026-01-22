@@ -1,13 +1,68 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_async_db
 from app.models.photo import Photo
 from app.schemas.photo import PhotoCreate, PhotoRead
+import uuid
+from pathlib import Path
+import aiofiles
 
 router = APIRouter(prefix="/photos", tags=["photos"])
 
+# Путь для сохранения (совпадает с тем, что в main.py)
+UPLOAD_DIR = Path("media/apartments")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+@router.post("/upload", response_model=PhotoRead, status_code=status.HTTP_201_CREATED)
+async def upload_photo(
+    apartment_id: int = Form(...),
+    is_main: bool = Form(False),
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_async_db)
+) -> Photo:
+    """
+    Загрузка файла на диск и создание записи в БД.
+    Используем Form для метаданных, чтобы передать файл и ID объекта одновременно.
+    """
+    # 1. Валидация расширения
+    ext = Path(file.filename).suffix.lower()
+    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Допустимы только изображения (jpg, png, webp)"
+        )
+
+    # 2. Генерация уникального пути
+    file_name = f"{uuid.uuid4()}{ext}"
+    relative_path = f"media/apartments/{file_name}"
+    absolute_path = Path(relative_path)
+
+    # 3. Асинхронная запись файла на диск
+    async with aiofiles.open(absolute_path, "wb") as buffer:
+        while content := await file.read(1024 * 1024):  # Читаем чанками
+            await buffer.write(content)
+
+    # 4. Логика единственного главного фото (is_main)
+    if is_main:
+        await db.execute(
+            update(Photo)
+            .where(Photo.apartment_id == apartment_id)
+            .values(is_main=False)
+        )
+
+    # 5. Создание записи в базе
+    new_photo = Photo(
+        apartment_id=apartment_id,
+        url=f"/{relative_path}", # Слэш в начале для корректной работы StaticFiles
+        is_main=is_main
+    )
+    
+    db.add(new_photo)
+    await db.commit()
+    await db.refresh(new_photo)
+    return new_photo
 
 @router.get("/", response_model=list[PhotoRead])
 async def get_photos(

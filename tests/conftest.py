@@ -16,6 +16,7 @@ from app.database import get_async_db
 from app.main import app
 from app.models import Apartment, Balance, Booking, Client, Investor, Landlord, Owner, User
 from app.models.base import Base
+from app.services.auth import AuthService
 
 # Используем psycopg3 для асинхронного PostgreSQL
 DATABASE_URL = "postgresql+psycopg://postgres:123456@localhost:5433/posutochka"
@@ -416,3 +417,17 @@ def configure_celery_for_tests():
         task_eager_propagates=True, # Ошибки в задачах будут видны в тестах
         broker_url="memory://",     # Имитация брокера в памяти
     )
+
+# @pytest.fixture
+# def auth_headers(mock_client_profile):
+#     """Создает заголовки с JWT токеном для созданного клиента."""
+#     token = AuthService.create_access_token(data={"sub": str(mock_client_profile.id)})
+#     return {"Authorization": f"Bearer {token}"}
+
+@pytest.fixture
+def client_auth_headers(mock_client_profile):
+    """Генерирует заголовки авторизации для mock_client_profile."""
+    access_token = AuthService.create_access_token(
+        data={"sub": str(mock_client_profile.id)}
+    )
+    return {"Authorization": f"Bearer {access_token}"}

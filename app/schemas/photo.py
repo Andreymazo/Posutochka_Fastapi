@@ -18,5 +18,5 @@ class PhotoRead(PhotoBase):
 
     id: int
     apartment_id: int
-
+    is_main: bool 
     model_config = {"from_attributes": True}

@@ -16,6 +16,7 @@ from app.models.investor import Investor
 from app.models.owner_earning import OwnerEarning
 from app.models.message import Message
 from app.models.coins_transaction import CoinsTransaction
+from app.models.document import Document
 
 __all__ = [
     "Apartment",
@@ -35,4 +36,5 @@ __all__ = [
     "Investor",
     "OwnerEarning",
     "CoinsTransaction",
+    "Document",
 ]

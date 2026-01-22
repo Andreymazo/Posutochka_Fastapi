@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
-
+from pathlib import Path
 from fastapi import FastAPI
-
+from fastapi.staticfiles import StaticFiles
 from app.database import engine
 from app.models import Base
 from app.routers import (
@@ -18,8 +18,19 @@ from app.routers import (
     transactions,
     users,
     chat,
+    document,
+    auth,
 )
 
+from fastapi.staticfiles import StaticFiles # 1. Импортируем
+import os
+
+# 1. Определяем пути в начале файла
+BASE_DIR = Path(__file__).resolve().parent
+UPLOAD_DIR = Path("media")
+# Создаем папку для медиа, если её нет
+if not os.path.exists("media"):
+    os.makedirs("media")
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -35,6 +46,7 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
 # Ниже закомменчено, это для логированния ошибок
 # from fastapi.exceptions import ResponseValidationError
 # from fastapi.responses import JSONResponse
@@ -57,6 +69,8 @@ app = FastAPI(
 #         status_code=422,
 #         content={"detail": error_details},
 #     )
+# Монтируем статику (теперь доступно по http://.../media/file.jpg)
+app.mount("/media", StaticFiles(directory="media"), name="media")
 # Include routers
 app.include_router(users.router)
 app.include_router(landlords.router)
@@ -71,6 +85,8 @@ app.include_router(reviews.router)
 app.include_router(owners.router)
 app.include_router(transactions.router)
 app.include_router(chat.router, prefix="/chat", tags=["Telegram Bot"])
+app.include_router(document.router)
+app.include_router(auth.router) 
 
 @app.get("/")
 def root():
