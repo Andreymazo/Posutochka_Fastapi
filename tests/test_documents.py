@@ -3,28 +3,44 @@ from httpx import AsyncClient
 from io import BytesIO
 import os
 
+
+# Используем реальные байты PDF и JPG для тестов
+# Байты настоящего PDF (минимальный)
+REAL_PDF_BYTES = b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n"
+# Байты настоящего JPG (минимальный)
+REAL_JPG_BYTES = b'\xff\xd8\xff\xe0\x00\x10\x4a\x46\x49\x46\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xdb\x00C\x00\x08\x06\x06\x07\x06\x05\x08\x07\x07\x07\t\t\x08\n\x0c\x14\r\x0c\x0b\x0b\x0c\x19\x12\x13\x0f\x14\x1d\x1a\x1f\x1e\x1d\x1a\x1c\x1c\x20!\x21\x20\x20\x20\x13\x21\x23\x23\x23\x15\x2b\x2c\x2a\x30\x31\x30\x28\x31\x2f\x30\x30\x30\xff\xc4\x00\x1f\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x11\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xda\x00\x0c\x03\x01\x00\x02\x11\x03\x11\x00\x3f\x00\xd9'
+
 @pytest.mark.asyncio
-async def test_upload_document_success(client: AsyncClient, mock_client_profile, client_auth_headers):
-    """Тест загрузки документа с использованием авторизации."""
-    file_content = b"fake pdf content"
-    files = {"file": ("passport.pdf", BytesIO(file_content), "application/pdf")}
+async def test_upload_document_success(client: AsyncClient, mock_client_profile, client_auth_headers, db_session):
+    """Тест загрузки документа: роутер сам берет ID из токена."""
+    # Используем реальные байты PDF
+    files = {"file": ("passport.pdf", BytesIO(REAL_PDF_BYTES), "application/pdf")}
+    data = {"doc_type": "passport"}
     
-    # Данные формы (id пользователя из фикстуры)
+    # Теперь в data только метаданные, БЕЗ user_id
     data = {
-        "user_id": str(mock_client_profile.id), 
         "doc_type": "passport"
     }
 
-    # Теперь обязательно добавляем headers=client_auth_headers
     response = await client.post(
         "/documents/upload", 
         files=files, 
         data=data, 
-        headers=client_auth_headers
+        headers=client_auth_headers # ID возьмется отсюда
     )
     
     assert response.status_code == 201
     assert response.json()["status"] == "uploaded"
+    
+    # ПРОВЕРКА: Действительно ли в базе ID совпадает с владельцем токена?
+    from app.models.document import Document
+    from sqlalchemy import select
+    
+    doc_id = response.json()["id"]
+    res = await db_session.execute(select(Document).where(Document.id == doc_id))
+    db_doc = res.scalar_one()
+    
+    assert db_doc.user_id == mock_client_profile.id  # Это подтверждает, что подмена невозможна
 
 
 @pytest.mark.asyncio
@@ -56,12 +72,21 @@ async def test_get_document_success(client: AsyncClient, mock_client_profile, cl
 @pytest.mark.asyncio
 async def test_upload_document_invalid_format(client: AsyncClient, mock_client_profile, client_auth_headers):
     """Покрывает строку 25 (ошибка формата)"""
-    files = {"file": ("virus.exe", BytesIO(b"content"), "application/x-msdownload")}
-    data = {"user_id": str(mock_client_profile.id), "doc_type": "passport"}
+     # Шлем реальный JPG, но под видом PDF
+   # Отправляем простой текст. magic определит его как "text/plain"
+    # А в ALLOWED_MIME у нас только pdf и картинки.
+    files = {"file": ("danger.txt", BytesIO(b"just some plain text"), "text/plain")}
+    data = {"doc_type": "passport"}
     
     response = await client.post("/documents/upload", files=files, data=data, headers=client_auth_headers)
+    
     assert response.status_code == 400
-    assert "Формат файла не поддерживается" in response.json()["detail"]
+    # Проверяем, что в тексте ошибки содержится правильный MIME-тип
+    assert "image/jpeg" in response.json()["detail"] 
+    assert "application/pdf" in response.json()["detail"]
+    # response = await client.post("/documents/upload", files=files, data=data, headers=client_auth_headers)
+    # assert response.status_code == 400
+    # assert "Формат файла не поддерживается" in response.json()["detail"]
 
 @pytest.mark.asyncio
 async def test_get_document_not_found(client: AsyncClient, client_auth_headers):
@@ -114,4 +139,16 @@ async def test_get_document_forbidden(
     # 4. Проверяем, что доступ запрещен
     assert response.status_code == 403
     assert response.json()["detail"] == "Доступ запрещен к чужим документам"
+
+@pytest.mark.asyncio
+async def test_upload_fake_pdf(client: AsyncClient, client_auth_headers):
+    # Создаем файл с расширением .pdf, но внутри которого ОБЫЧНЫЙ ТЕКСТ
+    files = {"file": ("fake.pdf", b"this is just plain text, not a PDF", "application/pdf")}
+    data = {"doc_type": "passport"}
+    
+    response = await client.post("/documents/upload", files=files, data=data, headers=client_auth_headers)
+    
+    # Должно вернуть 400, так как содержимое не соответствует PDF
+    assert response.status_code == 400
+    assert "Недопустимое содержимое" in response.json()["detail"]
 

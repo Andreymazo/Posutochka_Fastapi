@@ -104,6 +104,17 @@ class BookingService:
         )
 
         db.add(new_booking)
+             # --- НОВАЯ ЛОГИКА ИНТЕГРАЦИИ ---
+        # 5. Автоматически создаем блокировку в календаре доступности
+        # Чтобы наш поиск /search сразу "увидел", что даты заняты
+        availability_block = ApartmentAvailability(
+            apartment_id=booking_data.apartment_id,
+            blocked_period=booking_period,
+            is_blocked=True,
+            # Можно добавить примечание, чтобы лендлорд видел, что это бронь
+            # description=f"Бронирование #{new_booking.id}" 
+        )
+        db.add(availability_block)
         await db.commit()
 
         # Вместо refresh загружаем всё необходимое одним чистым запросом

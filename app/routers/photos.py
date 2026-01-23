@@ -8,25 +8,48 @@ from app.schemas.photo import PhotoCreate, PhotoRead
 import uuid
 from pathlib import Path
 import aiofiles
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+from app.models.user import User
 
 router = APIRouter(prefix="/photos", tags=["photos"])
 
 # Путь для сохранения (совпадает с тем, что в main.py)
 UPLOAD_DIR = Path("media/apartments")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+from app.services.roles import get_current_landlord  # Импортируем роль
+from app.models.user import User
+from app.models.apartment import Apartment # Нужно для проверки владения
 
 @router.post("/upload", response_model=PhotoRead, status_code=status.HTTP_201_CREATED)
 async def upload_photo(
     apartment_id: int = Form(...),
     is_main: bool = Form(False),
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_async_db)
+    db: AsyncSession = Depends(get_async_db),
+    # 1. Защищаем эндпоинт ролью
+    current_user: User = Depends(get_current_landlord) 
 ) -> Photo:
-    """
-    Загрузка файла на диск и создание записи в БД.
-    Используем Form для метаданных, чтобы передать файл и ID объекта одновременно.
-    """
-    # 1. Валидация расширения
+    
+    # 2. ПРОВЕРКА ВЛАДЕНИЯ
+    # Сначала проверяем, существует ли апартамент и принадлежит ли он юзеру
+    stmt = select(Apartment).where(Apartment.id == apartment_id)
+    result = await db.execute(stmt)
+    apartment = result.scalar_one_or_none()
+
+    if not apartment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Апартамент не найден"
+        )
+    
+    if apartment.landlord_id != current_user.landlord.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Вы не можете загружать фото в чужой апартамент"
+        )
+
+    # 3. Валидация расширения (твой код)
     ext = Path(file.filename).suffix.lower()
     if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
         raise HTTPException(
@@ -34,17 +57,16 @@ async def upload_photo(
             detail="Допустимы только изображения (jpg, png, webp)"
         )
 
-    # 2. Генерация уникального пути
+    # 4. Сохранение файла (твой код с aiofiles)
     file_name = f"{uuid.uuid4()}{ext}"
     relative_path = f"media/apartments/{file_name}"
     absolute_path = Path(relative_path)
 
-    # 3. Асинхронная запись файла на диск
     async with aiofiles.open(absolute_path, "wb") as buffer:
-        while content := await file.read(1024 * 1024):  # Читаем чанками
+        while content := await file.read(1024 * 1024):
             await buffer.write(content)
 
-    # 4. Логика единственного главного фото (is_main)
+    # 5. Логика is_main и сохранение в базу (твой код)
     if is_main:
         await db.execute(
             update(Photo)
@@ -52,10 +74,9 @@ async def upload_photo(
             .values(is_main=False)
         )
 
-    # 5. Создание записи в базе
     new_photo = Photo(
         apartment_id=apartment_id,
-        url=f"/{relative_path}", # Слэш в начале для корректной работы StaticFiles
+        url=f"/{relative_path}",
         is_main=is_main
     )
     
@@ -63,6 +84,37 @@ async def upload_photo(
     await db.commit()
     await db.refresh(new_photo)
     return new_photo
+
+# Не забудь про DELETE — его тоже нужно защитить!
+@router.delete("/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_photo(
+    photo_id: int, 
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_landlord) # Только лендлорд
+) -> None:
+    # Ищем фото и подтягиваем апартамент, чтобы проверить владельца
+    query = select(Photo).where(Photo.id == photo_id)
+    result = await db.execute(query)
+    photo = result.scalar_one_or_none()
+
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
+    # Проверяем, что фото принадлежит апартаменту этого лендлорда
+    # Для этого нужно, чтобы в модели Photo была связь или загрузить Apartment
+    apt_result = await db.execute(select(Apartment).where(Apartment.id == photo.apartment_id))
+    apartment = apt_result.scalar_one()
+    
+    if apartment.landlord_id != current_user.landlord.id:
+        raise HTTPException(status_code=403, detail="Нельзя удалять чужие фото")
+
+    # (Опционально) Удаление физического файла с диска
+    # file_path = Path(photo.url.lstrip("/"))
+    # if file_path.exists(): file_path.unlink()
+
+    await db.delete(photo)
+    await db.commit()
+
 
 @router.get("/", response_model=list[PhotoRead])
 async def get_photos(
@@ -99,13 +151,37 @@ async def create_photo(photo_data: PhotoCreate, db: AsyncSession = Depends(get_a
 
 
 @router.delete("/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_photo(photo_id: int, db: AsyncSession = Depends(get_async_db)) -> None:
-    """Delete a photo."""
+async def delete_photo(
+    photo_id: int, 
+    db: AsyncSession = Depends(get_async_db),
+    # 1. Добавляем обязательную авторизацию лендлорда
+    current_user: User = Depends(get_current_landlord)
+) -> None:
+    """Delete a photo with ownership check."""
+    
+    # 2. Ищем фото
     query = select(Photo).filter(Photo.id == photo_id)
     result = await db.execute(query)
     photo = result.scalar_one_or_none()
+    
     if not photo:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Photo not found")
 
+    # 3. Ищем апартамент, чтобы проверить владельца
+    # Используем selectinload или обычный select, чтобы найти связь
+    from app.models.apartment import Apartment
+    apt_query = select(Apartment).where(Apartment.id == photo.apartment_id)
+    apt_result = await db.execute(apt_query)
+    apartment = apt_result.scalar_one()
+
+    # 4. ПРОВЕРКА ВЛАДЕНИЯ
+    if apartment.landlord_id != current_user.landlord.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Вы не можете удалять чужие фотографии"
+        )
+
+    # 5. Сама операция удаления
     await db.delete(photo)
     await db.commit()
+

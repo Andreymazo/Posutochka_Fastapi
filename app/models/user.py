@@ -52,6 +52,18 @@ class User(Base):
     # Связь с документами
     documents: Mapped[list["Document"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
+    @property
+    def is_landlord(self) -> bool:
+        return self.landlord is not None
+
+    @property
+    def is_owner(self) -> bool:
+        return self.owner is not None
+
+    @property
+    def is_investor(self) -> bool:
+        return self.investor is not None
+    
     def __repr__(self) -> str:
         return f"User(id={self.id}, email='{self.email}')"
 

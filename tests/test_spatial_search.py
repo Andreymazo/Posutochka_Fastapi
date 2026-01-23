@@ -1,6 +1,22 @@
 import pytest
 from httpx import AsyncClient
+from app.main import app
+from app.services.roles import get_current_landlord
+from datetime import date, timedelta
 
+# 1. Определяем даты для поиска
+check_in = date.today() + timedelta(days=1)
+check_out = date.today() + timedelta(days=5)
+
+@pytest.fixture(autouse=True)
+async def setup_landlord_auth(mock_landlord_profile):
+    """Автоматически авторизуем лендлорда для всех тестов поиска."""
+    async def override_get_current_landlord():
+        return mock_landlord_profile
+
+    app.dependency_overrides[get_current_landlord] = override_get_current_landlord
+    yield
+    app.dependency_overrides.pop(get_current_landlord, None)
 
 @pytest.mark.asyncio
 async def test_search_apartments_in_radius(client: AsyncClient, sample_apartment_data):
@@ -15,7 +31,9 @@ async def test_search_apartments_in_radius(client: AsyncClient, sample_apartment
     search_params = {
         "lat": 55.75,
         "lon": 37.62,
-        "radius": 1000
+        "radius": 1000,
+        "check_in": check_in.isoformat(), 
+        "check_out": check_out.isoformat()
     }
 
     response = await client.get("/apartments/search", params=search_params)
@@ -37,7 +55,9 @@ async def test_search_apartments_out_of_radius(client: AsyncClient, sample_apart
     search_params = {
         "lat": 59.9343,
         "lon": 30.3351,
-        "radius": 1000
+        "radius": 1000,
+        "check_in": check_in.isoformat(), 
+        "check_out": check_out.isoformat()
     }
 
     response = await client.get("/apartments/search", params=search_params)

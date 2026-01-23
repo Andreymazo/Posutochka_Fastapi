@@ -64,3 +64,34 @@ async def test_get_current_user_user_not_found(client: AsyncClient):
     token = AuthService.create_access_token(data={"sub": "99999"})
     response = await client.get("/documents/1", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 401
+
+@pytest.mark.asyncio
+async def test_register_user_success(client: AsyncClient, db_session):
+    """Тест успешной регистрации нового пользователя."""
+    payload = {
+        "email": "new_traveler_2026@example.com",
+        "phone_number": "+79991234567",
+        "password": "strongpassword123",
+        "telegram_username": "traveler_tg"
+    }
+    
+    response = await client.post("/auth/register", json=payload)
+    
+    assert response.status_code == 201
+    data = response.json()
+    assert data["email"] == payload["email"]
+    assert "id" in data
+    assert "registration_date" in data
+
+@pytest.mark.asyncio
+async def test_register_duplicate_phone(client: AsyncClient, mock_client_profile):
+    """Тест ошибки при дублировании телефона (покрывает ветку 400)."""
+    payload = {
+        "email": "another_email@example.com",
+        "phone_number": mock_client_profile.phone_number, # Дубликат из фикстуры
+        "password": "somepassword"
+    }
+    
+    response = await client.post("/auth/register", json=payload)
+    assert response.status_code == 400
+    assert "уже существует" in response.json()["detail"]

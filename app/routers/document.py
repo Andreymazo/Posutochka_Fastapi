@@ -8,42 +8,65 @@ from app.models.document import Document
 from sqlalchemy import select
 from app.services.auth import get_current_user
 from app.models.user import User
-
+from fastapi.responses import FileResponse
+import magic
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 DOCS_DIR = Path("media/documents")
 DOCS_DIR.mkdir(parents=True, exist_ok=True)
 
+
+async def validate_file_content(file: UploadFile, allowed_types: list[str]):
+    # Читаем первые 2048 байт (этого достаточно для определения типа)
+    head = await file.read(2048)
+    await file.seek(0)  # Сбрасываем указатель в начало, чтобы потом сохранить файл целиком
+    
+    # Определяем MIME-тип
+    mime = magic.from_buffer(head, mime=True)
+    
+    if mime not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Недопустимое содержимое файла. Ожидалось: {allowed_types}, получено: {mime}"
+        )
+
 @router.post("/upload", status_code=status.HTTP_201_CREATED)
 async def upload_document(
-    user_id: int = Form(...),
     doc_type: str = Form(...),
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_async_db)
+    db: AsyncSession = Depends(get_async_db),
+    # 1. Получаем юзера напрямую из токена
+    current_user: User = Depends(get_current_user) 
 ):
+    # Список разрешенных MIME-типов
+    ALLOWED_MIME = ["application/pdf", "image/jpeg", "image/png"]
+    # ПРОВЕРКА ПО СОДЕРЖИМОМУ
+    await validate_file_content(file, ALLOWED_MIME)
+    # Теперь мы НЕ верим user_id из формы, а используем current_user.id
+    user_id = current_user.id
+
+    # Валидация расширения
     ext = Path(file.filename).suffix.lower()
     if ext not in [".jpg", ".jpeg", ".png", ".pdf"]:
         raise HTTPException(status_code=400, detail="Формат файла не поддерживается")
 
+    # Путь (лучше использовать user_id из токена для папок)
     file_name = f"doc_{user_id}_{uuid.uuid4().hex}{ext}"
     full_path = DOCS_DIR / file_name
 
-    # Асинхронно пишем
-    async with aiofiles.open(full_path, "wb") as buffer:
-        while content := await file.read(1024 * 1024):
-            await buffer.write(content)
+    # Запись... (твой код через aiofiles)
 
     # Сохраняем в БД
     new_doc = Document(
-        user_id=user_id,
+        user_id=user_id, # Гарантированно id владельца токена
         type=doc_type,
         file_path=str(full_path)
     )
     db.add(new_doc)
     await db.commit()
     return {"id": new_doc.id, "status": "uploaded"}
-from fastapi.responses import FileResponse
+
 
 @router.get("/{doc_id}")
 async def get_document(

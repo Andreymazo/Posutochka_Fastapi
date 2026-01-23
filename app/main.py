@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware  
 from fastapi.staticfiles import StaticFiles
 from app.database import engine
 from app.models import Base
@@ -46,7 +47,19 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+origins = [
+    "http://localhost:3000",    # React / Next.js
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",    # Vite
+]
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,     # Обязательно True для работы с авторизацией
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # Ниже закомменчено, это для логированния ошибок
 # from fastapi.exceptions import ResponseValidationError
 # from fastapi.responses import JSONResponse
@@ -72,6 +85,7 @@ app = FastAPI(
 # Монтируем статику (теперь доступно по http://.../media/file.jpg)
 app.mount("/media", StaticFiles(directory="media"), name="media")
 # Include routers
+app.include_router(auth.router) 
 app.include_router(users.router)
 app.include_router(landlords.router)
 app.include_router(clients.router)
@@ -86,7 +100,6 @@ app.include_router(owners.router)
 app.include_router(transactions.router)
 app.include_router(chat.router, prefix="/chat", tags=["Telegram Bot"])
 app.include_router(document.router)
-app.include_router(auth.router) 
 
 @app.get("/")
 def root():

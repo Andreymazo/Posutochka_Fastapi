@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from app.services.auth import AuthService # 1. Импортируй сервис
 from app.database import get_async_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserRead, UserUpdate
@@ -28,6 +28,7 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_async_db)) -> Us
     return user
 
 
+
 @router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def create_user(user_data: UserCreate, db: AsyncSession = Depends(get_async_db)) -> User:
     """Create a new user."""
@@ -49,17 +50,50 @@ async def create_user(user_data: UserCreate, db: AsyncSession = Depends(get_asyn
             status_code=status.HTTP_400_BAD_REQUEST, detail="Phone number already registered"
         )
 
-    # Create new user (in real app, hash the password)
+    # Create new user с реальным хешированием
     user = User(
         email=user_data.email,
         phone_number=user_data.phone_number,
-        password_hash=user_data.password_hash,  # Already hashed in real app
         telegram_username=user_data.telegram_username,
+        # ИСПРАВЛЕНИЕ ТУТ: берем password из схемы и хешируем его через сервис
+        password_hash=AuthService.get_password_hash(user_data.password), 
     )
     db.add(user)
     await db.commit()
     await db.refresh(user)
     return user
+# @router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+# async def create_user(user_data: UserCreate, db: AsyncSession = Depends(get_async_db)) -> User:
+#     """Create a new user."""
+#     # Check if email already exists
+#     query = select(User).filter(User.email == user_data.email)
+#     result = await db.execute(query)
+#     existing_user = result.scalar_one_or_none()
+#     if existing_user:
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
+#         )
+
+#     # Check if phone number already exists
+#     query = select(User).filter(User.phone_number == user_data.phone_number)
+#     result = await db.execute(query)
+#     existing_phone = result.scalar_one_or_none()
+#     if existing_phone:
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST, detail="Phone number already registered"
+#         )
+
+#     # Create new user (in real app, hash the password)
+#     user = User(
+#         email=user_data.email,
+#         phone_number=user_data.phone_number,
+#         password_hash=user_data.password_hash,  # Already hashed in real app
+#         telegram_username=user_data.telegram_username,
+#     )
+#     db.add(user)
+#     await db.commit()
+#     await db.refresh(user)
+#     return user
 
 
 @router.patch("/{user_id}", response_model=UserRead)

@@ -15,7 +15,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """Schema for creating a new User."""
 
-    password_hash: str = Field(..., min_length=6)
+    password: str = Field(..., min_length=6)
 
 
 class UserUpdate(BaseModel):

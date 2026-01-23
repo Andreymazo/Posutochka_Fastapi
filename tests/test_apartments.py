@@ -4,10 +4,26 @@ from typing import Any
 
 import pytest
 from httpx import AsyncClient
+from app.services.roles import get_current_landlord
+from app.main import app
 
 
 class TestApartmentEndpoints:
     """Tests for /apartments endpoints."""
+    
+    @pytest.fixture(autouse=True)
+    async def setup_landlord_auth(self, mock_landlord_profile):
+        """
+        Эта фикстура автоматически подменяет проверку роли 
+        для ВСЕХ тестов в этом классе.
+        """
+        async def override_get_current_landlord():
+            return mock_landlord_profile
+
+        app.dependency_overrides[get_current_landlord] = override_get_current_landlord
+        yield
+        # После каждого теста чистим, чтобы не аффектить другие файлы
+        app.dependency_overrides.pop(get_current_landlord, None)
 
     @pytest.mark.asyncio
     async def test_create_apartment(

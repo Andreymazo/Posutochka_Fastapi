@@ -125,7 +125,7 @@ def sample_user_data() -> dict[str, Any]:
     return {
         "email": f"user_{unique_suffix}@example.com",
         "phone_number": f"+7999{uuid.uuid4().int}"[:12], # Уникальный телефон
-        "password_hash": "secure_hash_2026",
+        "password": "secure_hash_2026",
         "telegram_username": f"tg_user_{unique_suffix}",
     }
 
@@ -375,21 +375,38 @@ async def mock_investor_profile(
     return user
 
 @pytest.fixture
-async def mock_landlord_profile(
-    db_session: AsyncSession,
-    sample_user_data_factory
-) -> User:
-    """Создает профиль Арендодателя с уникальными данными и балансом."""
+async def mock_landlord_profile(db_session: AsyncSession, sample_user_data_factory) -> User:
     user = User(**sample_user_data_factory())
     db_session.add(user)
     await db_session.flush()
 
     landlord_role = Landlord(user_id=user.id, first_name="Test", last_name="Landlord")
-    balance = Balance(user_id=user.id, current_balance=Decimal("0.00"))
+    db_session.add(landlord_role)
+    await db_session.commit()
+    
+    # ВАЖНО ДЛЯ ТЕСТОВ: принудительно подгружаем связь
+    from sqlalchemy.orm import selectinload
+    from sqlalchemy import select
+    stmt = select(User).options(selectinload(User.landlord)).where(User.id == user.id)
+    result = await db_session.execute(stmt)
+    return result.scalar_one()
 
-    db_session.add_all([landlord_role, balance])
-    await db_session.flush()
-    return user
+# @pytest.fixture
+# async def mock_landlord_profile(
+#     db_session: AsyncSession,
+#     sample_user_data_factory
+# ) -> User:
+#     """Создает профиль Арендодателя с уникальными данными и балансом."""
+#     user = User(**sample_user_data_factory())
+#     db_session.add(user)
+#     await db_session.flush()
+
+#     landlord_role = Landlord(user_id=user.id, first_name="Test", last_name="Landlord")
+#     balance = Balance(user_id=user.id, current_balance=Decimal("0.00"))
+
+#     db_session.add_all([landlord_role, balance])
+#     await db_session.flush()
+#     return user
 
 @pytest.fixture
 async def mock_client_profile(

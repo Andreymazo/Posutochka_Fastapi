@@ -1,6 +1,8 @@
 import pytest
 from httpx import AsyncClient
 from starlette import status
+from app.main import app
+from app.services.roles import get_current_landlord
 
 @pytest.mark.asyncio
 async def test_photos_full_lifecycle(
@@ -39,15 +41,37 @@ async def test_photos_full_lifecycle(
     assert response.status_code == 200
     assert response.json()["id"] == photo_id
 
-    # 4. DELETE /photos/{photo_id} - Удаление (строки 49-56)
-    response = await client.delete(f"/photos/{photo_id}")
-    assert response.status_code == 204
+    # 3. GET /photos/{photo_id} - Получение одного (проверка, что фото есть)
+    response = await client.get(f"/photos/{photo_id}")
+    assert response.status_code == 200
 
-    # 5. Ошибки 404 - Покрываем ветки 'if not photo' (строки 33 и 53)
-    # Для GET
-    response = await client.get("/photos/999999")
-    assert response.status_code == 404
-    
-    # Для DELETE
-    response = await client.delete("/photos/999999")
-    assert response.status_code == 404
+    # 4. DELETE /photos/{photo_id} - Удаление под авторизацией
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    from app.models.user import User
+
+    # Берем владельца
+    res = await db_session.execute(
+        select(User)
+        .options(selectinload(User.landlord))
+        .where(User.id == created_apartment.landlord.user_id)
+    )
+    owner_user = res.scalar_one()
+
+    app.dependency_overrides[get_current_landlord] = lambda: owner_user
+
+    try:
+        # УДАЛЯЕМ ФОТО
+        response = await client.delete(f"/photos/{photo_id}")
+        assert response.status_code == 204
+        
+        # 5. ПРОВЕРКА 404 (Удаление уже удаленного или несуществующего)
+        response = await client.delete("/photos/999999")
+        assert response.status_code == 404
+        
+        # Проверка 404 для GET
+        response = await client.get(f"/photos/{photo_id}") # Это фото мы только что удалили
+        assert response.status_code == 404
+        
+    finally:
+        app.dependency_overrides.pop(get_current_landlord, None)

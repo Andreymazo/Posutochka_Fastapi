@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_async_db
 from app.models.user import User
 from jose import JWTError 
-
+from sqlalchemy.orm import selectinload
 
 # Конфигурация (в идеале из .env)
 SECRET_KEY = "super-secret-key-2026" 
@@ -55,10 +55,25 @@ async def get_current_user(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-
-    # Ищем пользователя в базе
+    # Ищем пользователя с ПРЕДЗАГРУЗКОЙ связей
     from sqlalchemy import select
-    result = await db.execute(select(User).where(User.id == int(user_id)))
+    
+    # selectinload говорит алхимии сразу одним (или вторым) запросом 
+    # подтянуть данные из связанных таблиц landlord и client
+    # Ищем пользователя в базе
+    query = (
+            select(User)
+            .where(User.id == int(user_id))
+            .options(
+                selectinload(User.landlord), 
+                selectinload(User.client),
+                selectinload(User.owner),
+                selectinload(User.investor),
+            )
+        )
+    result = await db.execute(query)
+
+    # result = await db.execute(select(User).where(User.id == int(user_id)))
     user = result.scalar_one_or_none()
     
     if user is None:

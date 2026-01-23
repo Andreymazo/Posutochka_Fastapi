@@ -32,7 +32,7 @@ class TestUserSchemas:
         user = UserCreate(
             email="test@example.com",
             phone_number="+1234567890",
-            password_hash="securepass123",
+            password="securepass123",
             telegram_username="@testuser",
         )
         assert user.email == "test@example.com"
