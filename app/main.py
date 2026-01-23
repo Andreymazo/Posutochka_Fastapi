@@ -33,10 +33,17 @@ UPLOAD_DIR = Path("media")
 if not os.path.exists("media"):
     os.makedirs("media")
 
+# @asynccontextmanager
+# async def lifespan(_app: FastAPI):
+#     """Application lifespan: create database tables on startup."""
+#     Base.metadata.create_all(bind=engine)
+#     yield
+from app.database import async_engine 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
-    """Application lifespan: create database tables on startup."""
-    Base.metadata.create_all(bind=engine)
+async def lifespan(app: FastAPI):
+    # Асинхронное создание таблиц
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     yield
 
 

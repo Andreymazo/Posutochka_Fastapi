@@ -321,3 +321,22 @@ sudo systemctl enable redis-server
 
     Что сделать: Написать зависимости (Depends), которые проверяют, является ли current_user арендодателем.
     Зачем: Чтобы обычный клиент не смог случайно (или специально) удалить чужую квартиру или загрузить фото в чужой объект.
+
+
+
+    docker exec -it posutochka_storage mc alias set myminio http://localhost:9000 admin strong_password_2026
+    docker exec -it posutochka_storage mc anonymous set download myminio/apartments
+
+
+http://localhost:9001/browser/apartments
+Что это значит для твоего проекта «Посуточка 2026»:
+
+    Фронтенд (Next.js): Теперь в базе данных в таблице photos должны лежать именно такие ссылки: http://localhost:9000/apartments/имя_файла.jpg.
+    Бэкенд (FastAPI): Твой роутер для загрузки фото теперь будет работать «как часы». Он примет файл, сохранит его в бакет apartments и отдаст фронту готовую рабочую ссылку.
+    Docker: Вся связка (PostGIS + Redis + MinIO + Celery) полностью готова к реальной работе.
+docker logs posutochka_app
+docker exec -it posutochka_postgres psql -U postgres -d posutochka -c "CREATE EXTENSION IF NOT EXISTS btree_gist; CREATE EXTENSION IF NOT EXISTS postgis;"
+
+docker compose down -v  # Удалит контейнеры и ОЧИСТИТ старую базу (обязательно!)
+docker compose up -d    # Запустит всё с нуля, выполнит init.sql, а затем код приложения
+docker compose exec app python scripts/seed_apartm.py

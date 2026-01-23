@@ -2,7 +2,7 @@ from typing import Any, List, Optional
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 from datetime import datetime
-from sqlalchemy import Enum, ForeignKey, Integer, Numeric, DateTime, func
+from sqlalchemy import Enum, ForeignKey, Integer, Numeric, DateTime, func, CheckConstraint
 from sqlalchemy.dialects.postgresql import DATERANGE, ExcludeConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -104,12 +104,20 @@ class Booking(Base):
     # --- ОГРАНИЧЕНИЯ (CONSTRAINTS) ---
 
     __table_args__ = (
-        # GIST индекс для предотвращения пересекающихся дат на одну и ту же квартиру
+        # 1. ЗАЩИТА ОТ ОВЕРБУКИНГА:
+        # Для одного и того же апартамента (=)
+        # периоды дат не должны пересекаться (&&)
         ExcludeConstraint(
             ("apartment_id", "="),
             ("booking_period", "&&"),
             name="exclude_overlapping_bookings",
             using="gist",
+        ),
+        # 2. ПРОВЕРКА КОРРЕКТНОСТИ ДАТ:
+        # Дата заезда всегда строго меньше даты выезда
+        CheckConstraint(
+            "lower(booking_period) < upper(booking_period)", 
+            name="check_booking_dates_order"
         ),
     )
 
