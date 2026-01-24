@@ -69,6 +69,18 @@ services:
           memory: 512M       # Лимит памяти (для frontend можно поставить 1G)
         reservations:
           memory: 128M       # Гарантированный минимум
+  minio-init:
+    image: minio/mc
+    container_name: posutochka_minio_init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc alias set myminio http://minio:9000 admin strong_password_2026) do echo 'Waiting for MinIO...' && sleep 1; done;
+      /usr/bin/mc mb --ignore-existing myminio/apartments;
+      /usr/bin/mc anonymous set download myminio/apartments;
+      exit 0;
+      "
 
   # 4. Основное приложение FastAPI
   app:
@@ -175,13 +187,13 @@ services:
   #   command: sh -c "apk add --no-cache openssh-client && ssh -o StrictHostKeyChecking=no -p 443 -R0:app:8000 a.pinggy.io"
   #   depends_on:
   #     - app
-  tunnel:
-    image: cloudflare/cloudflared:latest
-    container_name: posutochka_tunnel
-    restart: always
-    # command: tunnel --protocol http2 --url http://app:8000
-     # Убираем протокол http2 и добавляем заголовок хоста для точности
-    command: tunnel --url http://app:8000 --http-int-sniff-res
+  # tunnel:
+  #   image: cloudflare/cloudflared:latest
+  #   container_name: posutochka_tunnel
+  #   restart: always
+  #   # command: tunnel --protocol http2 --url http://app:8000
+  #    # Убираем протокол http2 и добавляем заголовок хоста для точности
+  #   command: tunnel --url http://app:8000 --http-int-sniff-res
 
 volumes:
   postgres_data:

@@ -289,71 +289,9 @@ find . -name "__pycache__" -exec rm -rf {} +
  https://velocity-issues-palm-sampling.trycloudflare.com
  https://api.telegram.org/bot8508648552:AAGhEs_7LhZT7qFyPZCk39gONvOpZ1dcRL0/setWebhook?url=https://velocity-issues-palm-sampling.trycloudflare.com
  ________________________
- import React from 'react';
-import { Search, User } from 'lucide-react'; // Убедись, что npm install lucide-react
+___________________
+Что можно сделать следующим шагом:
 
-export default function HomePage() {
-  return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#1A1A1A] font-sans antialiased">
-      {/* Шапка */}
-      <nav className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
-        <div className="text-2xl font-black tracking-tighter italic">
-          POSUTOCHKA<span className="text-blue-600">.</span>
-        </div>
-        
-        <div className="flex items-center gap-6">
-          <button className="text-sm font-medium text-gray-600 hover:text-black">Стать арендодателем</button>
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-full shadow-sm hover:shadow-md transition-all font-semibold text-sm">
-            <User size={16} />
-            Войти
-          </button>
-        </div>
-      </nav>
-
-      {/* Hero-секция */}
-      <main className="max-w-7xl mx-auto px-6 pt-24 pb-12">
-        <div className="max-w-3xl">
-          <h1 className="text-6xl md:text-8xl font-bold leading-[0.9] tracking-tight mb-8">
-            Жилье там,<br />
-            <span className="text-gray-400">где вы сейчас.</span>
-          </h1>
-        </div>
-
-        {/* Поисковая панель */}
-        <div className="mt-12 p-3 bg-white rounded-[32px] shadow-2xl border border-gray-100 flex flex-col md:flex-row items-center gap-2 max-w-5xl">
-          <div className="flex-1 w-full px-6 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Направление</p>
-            <input 
-              type="text" 
-              placeholder="Куда едем?" 
-              className="w-full bg-transparent outline-none font-medium text-lg placeholder:text-gray-300"
-            />
-          </div>
-          
-          <div className="hidden md:block w-px h-12 bg-gray-100"></div>
-
-          <div className="flex-1 w-full px-6 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Даты</p>
-            <button className="text-gray-300 text-lg font-medium">Когда?</button>
-          </div>
-
-          <button className="w-full md:w-auto aspect-square p-5 bg-blue-600 text-white rounded-[24px] hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 flex items-center justify-center">
-            <Search size={24} strokeWidth={3} />
-          </button>
-        </div>
-
-        {/* Сетка-заглушка для контента */}
-        <div className="mt-20 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="group cursor-pointer">
-              <div className="aspect-[4/5] bg-gray-200 rounded-3xl mb-3 animate-pulse"></div>
-              <div className="h-4 w-2/3 bg-gray-100 rounded-md mb-2"></div>
-              <div className="h-4 w-1/3 bg-gray-100 rounded-md"></div>
-            </div>
-          ))}
-        </div>
-      </main>
-    </div>
-  );
-}
-________________________
+    Загрузка реальных фото: Реализовать в FastAPI эндпоинт, который принимает файл и отправляет его в ваш бакет apartments в MinIO.
+    Гео-поиск: Использовать возможности PostGIS, чтобы пользователь мог искать квартиры, просто двигая карту (передавая координаты границ экрана — BBox).
+    Telegram-уведомления: Раз у вас в конфиге уже есть worker и beat, можно настроить бота, который будет присылать арендодателю уведомление о новом бронировании.

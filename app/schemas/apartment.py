@@ -1,7 +1,7 @@
 from typing import Annotated, Any
 
 from geoalchemy2.elements import WKBElement
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, computed_field 
 from pydantic_shapely import GeometryField
 from shapely import wkb, wkt
 from shapely.geometry import Point
@@ -51,7 +51,17 @@ class ApartmentRead(BaseModel):
 
     # Используем аннотацию типа для списка PhotoRead
     photos: list[PhotoRead] | None = []
+      # Создаем динамические поля для фронтенда
+    @computed_field
+    @property
+    def latitude(self) -> float:
+        return self.location.y if hasattr(self.location, 'y') else 0.0
 
+    @computed_field
+    @property
+    def longitude(self) -> float:
+        return self.location.x if hasattr(self.location, 'x') else 0.0
+    
     @field_validator("location", mode="before")
     @classmethod
     def handle_dal_types(cls, v: Any) -> Any:
