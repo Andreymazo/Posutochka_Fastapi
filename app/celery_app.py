@@ -8,7 +8,8 @@ CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 celery_app = Celery(
     "posutochka_tasks",
     broker=CELERY_BROKER_URL,
-    include=["app.services.coins_tasks"]  # Путь к вашим задачам
+    include=["app.services.coins_tasks",
+             "app.services.notification_tasks"]  # Путь к вашим задачам
 )
 
 celery_app.conf.update(

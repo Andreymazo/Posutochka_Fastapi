@@ -7,10 +7,10 @@ from sqlalchemy.orm import selectinload # Добавлено для загруз
 from app.database import get_async_db
 from app.models import Message, User, Booking, Client, CoinsTransaction
 from app.services.telegram_service import TelegramService
+from app.core.redis import get_redis 
 
 router = APIRouter()
 tg_service = TelegramService()
-
 @router.post("/")
 async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_async_db)):
     data = await request.json()
@@ -21,13 +21,45 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_asyn
         text = msg.get("text", "")
         tg_user_id = msg["from"]["id"]
 
-        if text == "/start":
-            await tg_service.send_message(tg_user_id=tg_user_id, text="Добро пожаловать! 🏠")
+        # 1. ОБРАБОТКА /start (И обычный, и с UUID)
+        if text.startswith("/start"):
+            parts = text.split()
+            
+            # Если это просто /start (как в твоем тесте)
+            if len(parts) == 1:
+                await tg_service.send_message(tg_user_id=tg_user_id, text="Добро пожаловать! 🏠")
+                return {"status": "ok"}
+            
+            # Если это /start с UUID (для подтверждения регистрации)
+            link_token = parts[1]
+            redis_client = await get_redis()
+            user_id_bytes = await redis_client.get(f"tg_link:{link_token}")
+            
+            if user_id_bytes:
+                user_id = int(user_id_bytes)
+                user_res = await db.execute(select(User).where(User.id == user_id))
+                user = user_res.scalar_one_or_none()
+                
+                if user:
+                    user.telegram_id = tg_user_id
+                    user.is_tg_verified = True
+                    await db.commit()
+                    await redis_client.delete(f"tg_link:{link_token}")
+                    await redis_client.aclose()
+                    await tg_service.send_message(
+                        tg_user_id=tg_user_id, 
+                        text=f"✅ Аккаунт {user.email} подтвержден!"
+                    )
+                    return {"status": "ok"}
+            
+            await redis_client.aclose()
+            # Если токен не подошел, всё равно отвечаем "ok", чтобы Telegram не спамил повторами
             return {"status": "ok"}
-   
+
+        # 2. ОБРАБОТКА REPLY (Твоя рабочая логика)
         if "reply_to_message" in msg:
             original_tg_id = msg["reply_to_message"]["message_id"]
-
+            # ... тут весь твой код без изменений до db.commit() ...
             result = await db.execute(select(Message).where(Message.tg_message_id == original_tg_id))
             original_msg = result.scalars().first()
 
@@ -56,7 +88,6 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_asyn
                         confirm_words = ["подтверждаю", "ок", "одобряю", "да", "confirm"]
                         is_confirmed = any(word in text.lower() for word in confirm_words)
                         
-                        # Сначала ищем клиента, чтобы он был доступен для начисления
                         client_user_res = await db.execute(
                             select(User).join(Client, User.id == Client.user_id).where(Client.id == booking.client_id)
                         )
@@ -64,12 +95,10 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_asyn
 
                         if is_confirmed:
                             booking.booking_status = "confirmed"
-
                             if client_user:
                                 cashback = booking.cost * Decimal("0.05")
-                                
                                 new_coin_tx = CoinsTransaction(
-                                    user_id=client_user.id, # Теперь client_user определен!
+                                    user_id=client_user.id,
                                     amount=cashback,
                                     source_app="posutochka",
                                     booking_id=booking.id,
@@ -78,28 +107,169 @@ async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_asyn
                                 db.add(new_coin_tx)
                                 client_user.coins_balance += cashback 
 
-                        # Отправка уведомления
                         if client_user and client_user.telegram_id:
                             status_label = "✅ ПОДТВЕРЖДЕНО" if is_confirmed else "📩 Новое сообщение"
                             apt_name = booking.apartment.name if booking.apartment else "Объект"
-                            
-                            notification_msg = (
-                                f"{status_label}\n"
-                                f"Арендодатель ответил: \"{text}\"\n"
-                            )
+                            notification_msg = f"{status_label}\nАрендодатель ответил: \"{text}\"\n"
                             if is_confirmed:
                                 notification_msg += f"💰 Вам начислено кэшбэком: {booking.cost * Decimal('0.05')} Coins!\n"
-                            
                             notification_msg += f"Объект: {apt_name}"
-                            
-                            await tg_service.send_message(
-                                tg_user_id=client_user.telegram_id, 
-                                text=notification_msg
-                            )
+                            await tg_service.send_message(tg_user_id=client_user.telegram_id, text=notification_msg)
 
                     await db.commit()
 
+    # Всегда возвращаем ok в конце
     return {"status": "ok"}
+
+# from fastapi import Body
+# @router.post("/")
+# async def telegram_webhook(
+#     request: Request, 
+#     # Этот параметр нужен только для генерации документации Swagger
+#     payload: dict = Body(..., example={
+#         "message": {
+#             "from": {"id": 12345678, "first_name": "Andrey"},
+#             "text": "/start 984e4fcd-518e-4791-8e1d-8ac6ed380c0a"
+#         }
+#     }),
+#     db: AsyncSession = Depends(get_async_db)
+# ):
+#     data = await request.json()
+    
+#     if "message" in data:
+#             msg = data["message"]
+#             text = msg.get("text", "")
+#             tg_user_id = msg["from"]["id"]
+
+#             # 1. ОБРАБОТКА КОМАНДЫ /start (Регистрация и приветствие)
+#             if text.startswith("/start"):
+#                 parts = text.split()
+                
+#                 # Если есть токен подтверждения (напр. /start uuid)
+#                 if len(parts) > 1:
+#                     link_token = parts[1]
+#                     redis_client = await get_redis()
+#                     user_id_bytes = await redis_client.get(f"tg_link:{link_token}")
+                    
+#                     if user_id_bytes:
+#                         user_id = int(user_id_bytes)
+#                         user_res = await db.execute(select(User).where(User.id == user_id))
+#                         user = user_res.scalar_one_or_none()
+                        
+#                         if user:
+#                             user.telegram_id = tg_user_id
+#                             user.is_tg_verified = True
+#                             await db.commit()
+                            
+#                             await redis_client.delete(f"tg_link:{link_token}")
+#                             await redis_client.aclose()
+                            
+#                             await tg_service.send_message(
+#                                 tg_user_id=tg_user_id, 
+#                                 text=f"✅ Аккаунт {user.email} успешно подтвержден в Telegram!"
+#                             )
+#                             return {"status": "ok"}
+                    
+#                     await redis_client.aclose()
+#                     await tg_service.send_message(tg_user_id=tg_user_id, text="❌ Ссылка устарела или неверна.")
+#                     return {"status": "ok"}
+
+#                 # Обычный /start без параметров
+#                 await tg_service.send_message(tg_user_id=tg_user_id, text="Добро пожаловать! 🏠")
+#                 return {"status": "ok"}
+
+
+# @router.post("/")
+# async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_async_db)):
+#     data = await request.json()
+#     print(f"DEBUG: Входящие данные: {data}") 
+
+#     if "message" in data:
+#         msg = data["message"]
+#         text = msg.get("text", "")
+#         tg_user_id = msg["from"]["id"]
+
+#         if text == "/start":
+#             await tg_service.send_message(tg_user_id=tg_user_id, text="Добро пожаловать! 🏠")
+#             return {"status": "ok"}
+   
+#         if "reply_to_message" in msg:
+#             original_tg_id = msg["reply_to_message"]["message_id"]
+
+#             result = await db.execute(select(Message).where(Message.tg_message_id == original_tg_id))
+#             original_msg = result.scalars().first()
+
+#             if original_msg:
+#                 user_res = await db.execute(select(User).where(User.telegram_id == tg_user_id))
+#                 sender = user_res.scalars().first()
+        
+#                 if sender:
+#                     new_message = Message(
+#                         text=text,
+#                         booking_id=original_msg.booking_id,
+#                         sender_id=sender.id,
+#                         tg_message_id=msg["message_id"],
+#                         is_read=False
+#                     )
+#                     db.add(new_message)
+
+#                     booking_res = await db.execute(
+#                         select(Booking)
+#                         .where(Booking.id == original_msg.booking_id)
+#                         .options(selectinload(Booking.apartment)) 
+#                     )
+#                     booking = booking_res.scalar_one_or_none()
+
+#                     if booking:
+#                         confirm_words = ["подтверждаю", "ок", "одобряю", "да", "confirm"]
+#                         is_confirmed = any(word in text.lower() for word in confirm_words)
+                        
+#                         # Сначала ищем клиента, чтобы он был доступен для начисления
+#                         client_user_res = await db.execute(
+#                             select(User).join(Client, User.id == Client.user_id).where(Client.id == booking.client_id)
+#                         )
+#                         client_user = client_user_res.scalars().first()
+
+#                         if is_confirmed:
+#                             booking.booking_status = "confirmed"
+
+#                             if client_user:
+#                                 cashback = booking.cost * Decimal("0.05")
+                                
+#                                 new_coin_tx = CoinsTransaction(
+#                                     user_id=client_user.id, # Теперь client_user определен!
+#                                     amount=cashback,
+#                                     source_app="posutochka",
+#                                     booking_id=booking.id,
+#                                     description=f"Кэшбэк за бронирование #{booking.id}"
+#                                 )
+#                                 db.add(new_coin_tx)
+#                                 client_user.coins_balance += cashback 
+
+#                         # Отправка уведомления
+#                         if client_user and client_user.telegram_id:
+#                             status_label = "✅ ПОДТВЕРЖДЕНО" if is_confirmed else "📩 Новое сообщение"
+#                             apt_name = booking.apartment.name if booking.apartment else "Объект"
+                            
+#                             notification_msg = (
+#                                 f"{status_label}\n"
+#                                 f"Арендодатель ответил: \"{text}\"\n"
+#                             )
+#                             if is_confirmed:
+#                                 notification_msg += f"💰 Вам начислено кэшбэком: {booking.cost * Decimal('0.05')} Coins!\n"
+                            
+#                             notification_msg += f"Объект: {apt_name}"
+                            
+#                             await tg_service.send_message(
+#                                 tg_user_id=client_user.telegram_id, 
+#                                 text=notification_msg
+#                             )
+
+#                     await db.commit()
+
+#     return {"status": "ok"}
+
+
 # @router.post("/")
 # async def telegram_webhook(request: Request, db: AsyncSession = Depends(get_async_db)):
 #     data = await request.json()

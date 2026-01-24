@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 from decimal import Decimal
-from sqlalchemy import DateTime, Integer, String, func, BigInteger, Numeric
+from sqlalchemy import DateTime, Integer, String, func, BigInteger, Numeric, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -51,6 +51,11 @@ class User(Base):
     coins_transactions: Mapped[list["CoinsTransaction"]] = relationship(back_populates="user")
     # Связь с документами
     documents: Mapped[list["Document"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    #Поля дляверификации при регистрации
+    is_email_verified: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    is_phone_verified: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    is_tg_verified: Mapped[bool] = mapped_column(Boolean, server_default="false")
+
 
     @property
     def is_landlord(self) -> bool:

@@ -17,10 +17,10 @@ from app.routers import (
     photos,
     reviews,
     transactions,
-    users,
     chat,
     document,
     auth,
+    users
 )
 
 from fastapi.staticfiles import StaticFiles # 1. Импортируем

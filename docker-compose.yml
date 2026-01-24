@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # 1. База данных PostGIS
+  # 1. База данных PostGIS (с поддержкой гео-запросов и GIST индексов)
   db:
     image: postgis/postgis:16-3.4
     container_name: posutochka_postgres
@@ -19,6 +19,14 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    stop_grace_period: 3s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'        # Использовать не более половины одного ядра
+          memory: 1G       # Лимит памяти (для frontend можно поставить 1G)
+        reservations:
+          memory: 128M       # Гарантированный минимум
 
   # 2. Redis — Брокер для Celery и кэш
   redis:
@@ -31,20 +39,36 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    stop_grace_period: 3s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'        # Использовать не более половины одного ядра
+          memory: 512M       # Лимит памяти (для frontend можно поставить 1G)
+        reservations:
+          memory: 128M       # Гарантированный минимум
 
-  # 3. MinIO — Хранилище фото
+  # 3. MinIO — Хранилище фото (S3-совместимое)
   minio:
     image: minio/minio:latest
     container_name: posutochka_storage
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9000:9000" # API
+      - "9001:9001" # Web Console
     environment:
       MINIO_ROOT_USER: admin
       MINIO_ROOT_PASSWORD: strong_password_2026
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+    stop_grace_period: 3s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'        # Использовать не более половины одного ядра
+          memory: 512M       # Лимит памяти (для frontend можно поставить 1G)
+        reservations:
+          memory: 128M       # Гарантированный минимум
 
   # 4. Основное приложение FastAPI
   app:
@@ -67,8 +91,15 @@ services:
     volumes:
       - .:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-
-  # 5. Celery Worker — Исполнитель задач
+    stop_grace_period: 3s
+    deploy:
+        resources:
+          limits:
+            cpus: '0.5'        # Использовать не более половины одного ядра
+            memory: 512M       # Лимит памяти (для frontend можно поставить 1G)
+          reservations:
+            memory: 128M       # Гарантированный минимум
+  # 5. Celery Worker — Исполнитель фоновых задач (уведомления)
   worker:
     build: .
     container_name: posutochka_worker
@@ -82,8 +113,16 @@ services:
     volumes:
       - .:/app
     command: celery -A app.celery_app.celery_app worker --loglevel=info
+    stop_grace_period: 3s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'        # Использовать не более половины одного ядра
+          memory: 512M       # Лимит памяти (для frontend можно поставить 1G)
+        reservations:
+          memory: 128M       # Гарантированный минимум
 
-  # 6. Celery Beat — Планировщик (для ночной очистки коинов)
+  # 6. Celery Beat — Планировщик задач
   beat:
     build: .
     container_name: posutochka_beat
@@ -95,7 +134,56 @@ services:
     volumes:
       - .:/app
     command: celery -A app.celery_app.celery_app beat --loglevel=info
+    stop_grace_period: 3s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'        # Использовать не более половины одного ядра
+          memory: 512M       # Лимит памяти (для frontend можно поставить 1G)
+        reservations:
+          memory: 128M       # Гарантированный минимум
+
+  # 7. Фронтенд Next.js (Новый сервис!)
+  frontend:
+    build:
+      context: ./posutochka-front
+      dockerfile: Dockerfile
+    container_name: posutochka_nextjs
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    volumes:
+      - ./posutochka-front:/app
+      - /app/node_modules # Сохраняем модули внутри контейнера
+    depends_on:
+      - app
+    stop_grace_period: 3s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'        # Использовать не более половины одного ядра
+          memory: 1G      # Лимит памяти (для frontend можно поставить 1G)
+        reservations:
+          memory: 128M       # Гарантированный минимум
+  # # 8. Туннель для Telegram (Pinggy)
+  # pinggy:
+  #   image: alpine
+  #   container_name: posutochka_pinggy
+  #   tty: true
+  #   stdin_open: true
+  #   command: sh -c "apk add --no-cache openssh-client && ssh -o StrictHostKeyChecking=no -p 443 -R0:app:8000 a.pinggy.io"
+  #   depends_on:
+  #     - app
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: posutochka_tunnel
+    restart: always
+    # command: tunnel --protocol http2 --url http://app:8000
+     # Убираем протокол http2 и добавляем заголовок хоста для точности
+    command: tunnel --url http://app:8000 --http-int-sniff-res
 
 volumes:
   postgres_data:
   minio_data:
+

@@ -32,5 +32,7 @@ class UserRead(UserBase):
 
     id: int
     registration_date: datetime
-
+    # Добавляем поле для ссылки. По умолчанию None, 
+    # так как в базе его нет, оно генерируется «на лету».
+    telegram_link: str | None = None 
     model_config = {"from_attributes": True}

@@ -1,12 +1,11 @@
-
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
+from typing import Any
 from geoalchemy2 import Geography
 from geoalchemy2.shape import from_shape
 from shapely.geometry.point import Point
 from sqlalchemy import cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from typing import Any
 from app.database import get_async_db
 from app.models.apartment import Apartment
 from app.schemas.apartment import ApartmentCreate, ApartmentRead, ApartmentUpdate
@@ -170,10 +169,6 @@ async def delete_apartment(apartment_id: int, db: AsyncSession = Depends(get_asy
 
     await db.delete(apartment)
     await db.commit()
-
-
-
-router = APIRouter()
 
 # Конфигурация из docker-compose
 MINIO_ENDPOINT = "http://minio:9000"

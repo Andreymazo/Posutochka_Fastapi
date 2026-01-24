@@ -448,3 +448,11 @@ def client_auth_headers(mock_client_profile):
         data={"sub": str(mock_client_profile.id)}
     )
     return {"Authorization": f"Bearer {access_token}"}
+
+#  сброс Redis
+@pytest.fixture(autouse=True)
+async def clear_redis():
+    from app.core.redis import get_redis
+    redis = await get_redis()
+    await redis.flushall()
+    await redis.close()

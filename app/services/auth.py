@@ -32,11 +32,8 @@ class AuthService:
         expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=15))
         to_encode.update({"exp": expire})
         return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    
-
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
-
 
 async def get_current_user(
     db: AsyncSession = Depends(get_async_db),
