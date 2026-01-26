@@ -56,7 +56,10 @@ async def create_user(user_data: UserCreate, db: AsyncSession = Depends(get_asyn
         phone_number=user_data.phone_number,
         telegram_username=user_data.telegram_username,
         # ИСПРАВЛЕНИЕ ТУТ: берем password из схемы и хешируем его через сервис
-        password_hash=AuthService.get_password_hash(user_data.password), 
+        password_hash=AuthService.get_password_hash(user_data.password),
+        first_name=user_data.first_name,
+        last_name=user_data.last_name
+
     )
     db.add(user)
     await db.commit()

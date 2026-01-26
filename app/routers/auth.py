@@ -87,7 +87,9 @@ async def register(
                 phone_number=user_data.phone_number,
                 telegram_username=user_data.telegram_username,
                 telegram_id=getattr(user_data, "telegram_id", None),
-                password_hash=AuthService.get_password_hash(user_data.password)
+                password_hash=AuthService.get_password_hash(user_data.password),
+                first_name=user_data.first_name,
+                last_name=user_data.last_name
             )
             db.add(new_user)
 

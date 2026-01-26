@@ -1,6 +1,6 @@
 from datetime import date
 from enum import Enum
-from typing import Any
+from typing import Any, Self
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -26,10 +26,20 @@ class BookingBase(BaseModel):
 
 class BookingCreate(BookingBase):
     """Schema for creating a new Booking."""
-
+    start_date: date
+    end_date: date
+    cost: float = Field(..., ge=0.01) 
     landlord_id: int
     client_id: int
     apartment_id: int
+    booking_status: str = "pending"
+
+    
+    @model_validator(mode='after')
+    def check_dates(self) -> Self:
+        if self.end_date <= self.start_date:
+            raise ValueError("Дата выезда должна быть позже даты заезда")
+        return self
 
 
 class BookingUpdate(BaseModel):

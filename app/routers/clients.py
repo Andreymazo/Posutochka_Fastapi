@@ -14,8 +14,9 @@ async def get_client_db(client_id: int, db: AsyncSession) -> Client | None:
     query = (
         select(Client)
         .options(
+            selectinload(Client.user), 
             selectinload(Client.reviews_about_me),
-            selectinload(Client.reviews_i_wrote)
+            selectinload(Client.reviews_i_wrote), 
         )
         .where(Client.id == client_id)
     )
@@ -48,8 +49,7 @@ async def get_client(client_id: int, db: AsyncSession = Depends(get_async_db)):
 async def create_client(client_data: ClientCreate, db: AsyncSession = Depends(get_async_db)):
     client = Client(
         user_id=client_data.user_id,
-        first_name=client_data.first_name,
-        last_name=client_data.last_name,
+       
     )
     db.add(client)
     await db.commit()

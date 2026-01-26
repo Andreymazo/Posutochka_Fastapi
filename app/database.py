@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 load_dotenv()
 
 # Database URL from environment variable or default
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:123456@localhost:5433/posutochka")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:123456@localhost:5433/posutochka")
 
 # Convert sync DATABASE_URL to async for AsyncEngine
 # Replace postgresql:// or postgres:// with postgresql+psycopg://
@@ -18,19 +18,29 @@ ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg:/
     "postgres://", "postgresql+psycopg://"
 )
 
-# Create SQLAlchemy engines (both sync and async)
-# Sync engine for backward compatibility and migrations
-engine = create_engine(DATABASE_URL)
+# # Create SQLAlchemy engines (both sync and async)
+# # Sync engine for backward compatibility and migrations
+# engine = create_engine(DATABASE_URL)
 
-# Async engine for new async services
-async_engine = create_async_engine(ASYNC_DATABASE_URL, echo=False, future=True)
-
-# Create session factories
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-AsyncSessionLocal = async_sessionmaker(
-    async_engine, class_=AsyncSession, expire_on_commit=False
+# 1. Создаем ОДИН асинхронный движок
+async_engine = create_async_engine(
+    DATABASE_URL, 
+    echo=True,       # Видим SQL-запросы в консоли
+    future=True
 )
 
+# 2. Создаем фабрику асинхронных сессий
+# В SQLAlchemy 2.0+ async_sessionmaker — это стандарт
+AsyncSessionLocal = async_sessionmaker(
+    bind=async_engine, 
+    class_=AsyncSession, 
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False
+)
+# Если старый код всё еще ищет переменную "SessionLocal", 
+# просто приравняйте её к асинхронной, чтобы не переписывать импорты:
+SessionLocal = AsyncSessionLocal
 
 def get_db() -> Generator[Session, None, None]:
     """

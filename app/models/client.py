@@ -17,8 +17,6 @@ class Client(Base):
     __tablename__ = "client"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    first_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    last_name: Mapped[str] = mapped_column(String(100), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),server_default=func.now(), onupdate=func.now())
     # Foreign keys
@@ -45,4 +43,4 @@ class Client(Base):
     )
 
     def __repr__(self) -> str:
-        return f"Client(id={self.id}, name='{self.first_name} {self.last_name}')"
+        return f"Client(id={self.id},')"

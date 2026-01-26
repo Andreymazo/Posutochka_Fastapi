@@ -3,7 +3,6 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware  
 from fastapi.staticfiles import StaticFiles
-from app.database import engine
 from app.models import Base
 from app.routers import (
     apartments,

@@ -65,3 +65,56 @@ async def test_search_apartments_out_of_radius(client: AsyncClient, sample_apart
         print(f"\nДетали ошибки 422: {response.json()}") # Это покажет, на чем именно валится Pydantic
     assert response.status_code == 200
     assert len(response.json()) == 0
+
+@pytest.mark.asyncio
+async def test_search_excludes_booked_apartment(
+    client: AsyncClient, 
+    db_session, 
+    sample_apartment_data,
+    created_landlord,
+    created_client
+):
+    """Тест: апартамент в радиусе, но исключен из-за существующей брони."""
+    
+    # 1. Создаем апартамент в Москве
+    sample_apartment_data["location"] = "POINT(37.6173 55.7558)"
+    resp = await client.post("/apartments/", json=sample_apartment_data)
+    apt_id = resp.json()["id"]
+
+    # Даты поиска
+    search_in = date(2026, 8, 1)
+    search_out = date(2026, 8, 10)
+
+    # 2. Создаем бронь, которая перекрывает эти даты
+    from app.models import Booking
+    from psycopg.types.range import Range
+    from decimal import Decimal
+
+    booking = Booking(
+        apartment_id=apt_id,
+        landlord_id=created_landlord.id,
+        client_id=created_client.id,
+        booking_period=Range(date(2026, 8, 5), date(2026, 8, 15), bounds="[]"),
+        cost=Decimal("25000.00"),
+        booking_status="confirmed"
+    )
+    db_session.add(booking)
+    await db_session.commit()
+
+    # 3. Выполняем поиск на [2026-08-01, 2026-08-10]
+    # Периоды перекрываются (с 5 по 10 число), значит объект должен исчезнуть
+    search_params = {
+        "lat": 55.7558,
+        "lon": 37.6173,
+        "radius": 1000,
+        "check_in": search_in.isoformat(),
+        "check_out": search_out.isoformat()
+    }
+
+    response = await client.get("/apartments/search", params=search_params)
+    
+    assert response.status_code == 200
+    data = response.json()
+    
+    # Объект НЕ должен попасть в выдачу
+    assert not any(a["id"] == apt_id for a in data), "Забронированный объект должен быть скрыт"

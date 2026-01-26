@@ -57,6 +57,7 @@ async def test_create_booking_min_stay_violation(db_session, created_apartment, 
         await BookingService.create_new_booking(db_session, booking_data, client_id=999)
     assert exc.value.status_code == 400
     assert "Минимальный срок проживания" in exc.value.detail
+
 @pytest.mark.asyncio
 async def test_get_bookings_filters(db_session, created_booking):
     """Проверка работы всех фильтров в списке броней."""

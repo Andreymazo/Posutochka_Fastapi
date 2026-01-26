@@ -295,3 +295,64 @@ ___________________
     Загрузка реальных фото: Реализовать в FastAPI эндпоинт, который принимает файл и отправляет его в ваш бакет apartments в MinIO.
     Гео-поиск: Использовать возможности PostGIS, чтобы пользователь мог искать квартиры, просто двигая карту (передавая координаты границ экрана — BBox).
     Telegram-уведомления: Раз у вас в конфиге уже есть worker и beat, можно настроить бота, который будет присылать арендодателю уведомление о новом бронировании.
+    
+INSERT INTO apartment (name, address, price_per_night, description, location, landlord_id) VALUES
+('Студия у Эрмитажа', 'Миллионная ул., 5', 5500, 'Центр города, вид на Неву.', ST_SetSRID(ST_MakePoint(30.3158, 59.9436), 4326), 1),
+('Лофт на Петроградке', 'Большой пр. ПС, 44', 4200, 'Стильный интерьер, высокие потолки.', ST_SetSRID(ST_MakePoint(30.3015, 59.9590), 4326), 1),
+('Уют на Ваське', '6-я линия В.О., 12', 3800, 'Тихий двор, рядом метро.', ST_SetSRID(ST_MakePoint(30.2785, 59.9400), 4326), 1),
+('Пентхаус на Лиговке', 'Лиговский пр., 50', 8500, 'Панорамные окна, терраса.', ST_SetSRID(ST_MakePoint(30.3555, 59.9248), 4326), 1),
+('Квартира у Новой Голландии', 'наб. Адмиралтейского канала, 15', 4800, 'Рядом с парком.', ST_SetSRID(ST_MakePoint(30.2890, 59.9295), 4326), 1);
+ смена порта в базе в контейнере 1. замена 5433:5432 в ямль и 2. docker-compose up -d --force-recreate db
+ ___________________________________________________
+ удаляем если запутались.
+ docker exec -it posutochka_postgres psql -U postgres -d posutochka -c "DROP TABLE IF EXISTS alembic_version;"
+ docker exec -it posutochka_postgres psql -U postgres -d posutochka -c "DROP TABLE IF EXISTS \"user\" CASCADE; DROP TABLE IF EXISTS alembic_version;"
+
+# Удаляем ВСЕ таблицы, чтобы Alembic создал их по моделям с нуля
+docker exec -it posutochka_postgres psql -U postgres -d posutochka -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO postgres; GRANT ALL ON SCHEMA public TO public;"
+# Теперь нужно заново создать расширения (так как схема public была пересоздана)
+docker exec -it posutochka_postgres psql -U postgres -d posutochka -c "CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS btree_gist;"
+docker exec -it posutochka_app alembic revision --autogenerate -m "initial_schema"
+docker exec -it posutochka_app alembic upgrade head
+docker compose down -v
+docker exec -it containerpostgres psql -U postgres -d posutochka -c "CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS btree_gist;"
+docker run -d \
+  --name containerpostgres \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=123456 \
+  -e POSTGRES_DB=posutochka \
+  -p 5434:5432 \
+  postgis/postgis:16-3.4
+
+docker system prune
+docker volume prune
+docker rm $(docker ps -a -q)
+docker stop $(docker ps -q)
+если не сохранияется 
+sudo chown -R $USER:$USER .
+
+docker run -d \
+  --name posutochka_redis_test \
+  -p 6380:6379 \
+  redis:7-alpine
+
+  docker exec -it posutochka_app alembic revision --autogenerate -m "add_booking_constraints"
+docker exec -it posutochka_app alembic upgrade head
+_________________________
+ user_data = sample_user_data_factory()
+    
+    # 1. Извлекаем чистый пароль для логина
+    raw_password = user_data.pop("password") 
+    
+    # 2. Убираем password_hash, если хотим захешировать его правильно через сервис
+    user_data.pop("password_hash", None)
+    
+    # 3. Теперь в user_data нет лишних ключей, и SQLAlchemy не ругается
+    user = User(**user_data)
+    user.password_hash = AuthService.get_password_hash(raw_password)
+    
+    db_session.add(user)
+    await db_session.commit()
+    ______________________________
+    tests/test_booking_tasks.py
+    tests/test_bookings.py

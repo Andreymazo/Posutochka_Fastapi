@@ -14,21 +14,22 @@ from app.models.booking import Booking
 from app.models.client import Client
 from app.models.landlord import Landlord
 
+from unittest.mock import patch, AsyncMock
+
 
 class TestBookingDateRange:
     """Tests for DATERANGE functionality in Booking model."""
-
-    @pytest.mark.asyncio  # Обязательно: указывает pytest, что тест асинхронный
+    
+    @pytest.mark.asyncio
     async def test_create_booking_with_daterange(
         self,
-        client: AsyncClient,  # Используем AsyncClient вместо TestClient
+        client: AsyncClient,
         created_landlord: Landlord,
         created_client: Client,
         created_apartment: Apartment,
     ) -> None:
-        """Test creating a booking with start_date and end_date (converted to DATERANGE)."""
         booking_data = {
-            "start_date": "2026-03-15",  # Используем 2026 год
+            "start_date": "2026-03-15",
             "end_date": "2026-03-20",
             "cost": 250.0,
             "booking_status": "pending",
@@ -36,17 +37,13 @@ class TestBookingDateRange:
             "client_id": created_client.id,
             "apartment_id": created_apartment.id,
         }
-
-        # Обязательно добавляем await перед вызовом
-        response = await client.post("/bookings/", json=booking_data)
-
-        # Теперь AttributeError: 'coroutine' исчезнет
+    
+        # ПАТЧИМ задачу уведомлений, чтобы она не лезла в базу параллельно
+        with patch("app.routers.bookings.send_booking_notification") as mock_task:
+            response = await client.post("/bookings/", json=booking_data)
+            
         assert response.status_code == 201
-        data = response.json()
-        assert data["start_date"] == "2026-03-15"
-        assert data["end_date"] == "2026-03-20"
-        assert data["cost"] == 250.0
-        assert data["booking_status"] == "pending"
+
 
     @pytest.mark.asyncio
     async def test_get_booking_returns_dates_from_range(

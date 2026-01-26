@@ -19,8 +19,6 @@ class Landlord(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), unique=True, nullable=False)
-    first_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    last_name: Mapped[str] = mapped_column(String(100), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     # Relationships
@@ -43,4 +41,4 @@ class Landlord(Base):
     )
 
     def __repr__(self) -> str:
-        return f"Landlord(id={self.id}, name='{self.first_name} {self.last_name}')"
+        return f"Landlord(id={self.id},')"

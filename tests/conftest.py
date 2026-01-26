@@ -19,7 +19,7 @@ from app.models.base import Base
 from app.services.auth import AuthService
 
 # Используем psycopg3 для асинхронного PostgreSQL
-DATABASE_URL = "postgresql+psycopg://postgres:123456@localhost:5433/posutochka"
+DATABASE_URL = "postgresql+psycopg://postgres:123456@localhost:5434/posutochka"
 
 engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncTestingSessionLocal = async_sessionmaker(
@@ -116,31 +116,47 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
 #     # Сбрасываем подмены после теста
 #     app.dependency_overrides.clear()
 
-
+import random
 
 @pytest.fixture
 def sample_user_data() -> dict[str, Any]:
-    """Генерирует уникальные данные для тестирования родительской сущности User."""
+    """Генерирует данные, строго соответствующие схеме UserCreate."""
     unique_suffix = uuid.uuid4().hex[:6]
+    # Генерируем ровно 10 цифр после +7 для прохождения валидатора
+    random_digits = "".join([str(random.randint(0, 9)) for _ in range(7)])
+    
     return {
         "email": f"user_{unique_suffix}@example.com",
-        "phone_number": f"+7999{uuid.uuid4().int}"[:12], # Уникальный телефон
-        "password": "secure_hash_2026",
-        "telegram_username": f"tg_user_{unique_suffix}",
+        "phone_number": f"+7900{random_digits}", 
+        "password": "secure_password_2026",
+        "first_name": f"Имя_{unique_suffix}",
+        "last_name": f"Фамилия_{unique_suffix}",
+        "telegram_username": f"tg_{unique_suffix}"
     }
 
 @pytest.fixture
 def sample_user_data_factory() -> Callable[[], dict[str, Any]]:
-    """Фабрика для генерации уникальных данных пользователя при каждом вызове."""
+    """Фабрика для генерации полных уникальных данных пользователя."""
     def _generate_data():
-        unique_suffix = uuid.uuid4().hex[:8] # Увеличим длину для надежности
+        unique_suffix = uuid.uuid4().hex[:8]
         return {
             "email": f"user_{unique_suffix}@example.com",
             "phone_number": f"+7999{str(uuid.uuid4().int)[:8]}",
-            "password_hash": "secure_hash_2026",
+            # ВАЖНО: Добавляем обязательные поля профиля
+            "first_name": f"Имя_{unique_suffix}",
+            "last_name": f"Фамилия_{unique_suffix}",
+            # Для тестов регистрации обычно нужно поле "password", 
+            # а для прямого создания в БД — "password_hash"
+            "password": "strongpassword123",
+            "password_hash": "hashed_dummy_password_2026", 
             "telegram_username": f"tg_user_{unique_suffix}",
+            # Поля верификации (уже добавленные нами ранее)
+            "is_email_verified": False,
+            "is_phone_verified": False,
+            "is_tg_verified": False
         }
     return _generate_data
+
 
 @pytest.fixture
 def sample_user_landlord_data() -> dict[str, Any]:
@@ -151,6 +167,13 @@ def sample_user_landlord_data() -> dict[str, Any]:
         "phone_number": f"+1{uuid.uuid4().int}"[:12],
         "password_hash": "landlord_pass",
         "telegram_username": f"@landlord_{uid}",
+        # Добавляем обязательные поля, которые мы перенесли в модель User
+        "first_name": "Иван",
+        "last_name": "Хозяев",
+        # Добавляем статус верификации (если в модели они NOT NULL)
+        "is_email_verified": False,
+        "is_phone_verified": False,
+        "is_tg_verified": False
     }
 
 @pytest.fixture
@@ -161,6 +184,9 @@ def sample_user_client_data() -> dict[str, Any]:
         "phone_number": f"+2{uuid.uuid4().int}"[:12],
         "password_hash": "client_pass",
         "telegram_username": f"@client_{uid}",
+        "first_name": "Иванн",
+        "last_name": "Хозяевв",
+        
     }
 
 @pytest.fixture
@@ -177,6 +203,8 @@ def sample_user_owner_data() -> dict[str, Any]:
         "email": f"owner_{unique_id}@example.com", # Уникальный email
         "phone_number": f"+3333{unique_id}",
         "password_hash": "owner_pass",
+        "first_name": f"Имя_Какоето",
+        "last_name": f"Фамилия_тоже Какаято",
 
     }
 
@@ -256,8 +284,7 @@ async def created_landlord(db_session: AsyncSession, created_landlord_user: User
     """Создает Арендодателя (связан с User 1)."""
     landlord = Landlord(
         user_id=created_landlord_user.id,
-        first_name="Иван",
-        last_name="Хозяев"
+       
     )
     db_session.add(landlord)
     await db_session.commit()
@@ -278,8 +305,6 @@ async def created_client(db_session: AsyncSession, created_client_user: User) ->
     """Создает Клиента (связан с User 2)."""
     client = Client(
         user_id=created_client_user.id,
-        first_name="Петр",
-        last_name="Гость"
     )
     db_session.add(client)
     await db_session.commit()
@@ -339,30 +364,63 @@ async def mock_owner_profile(
     db_session: AsyncSession,
     sample_user_data_factory
 ) -> User:
-    """Создает профиль Владельца с уникальными данными и балансом."""
-    # 1. Создаем User напрямую
-    user = User(**sample_user_data_factory())
+    """Создает профиль Владельца с уникальными данными и балансом (2026)."""
+    
+    # 1. Получаем данные из фабрики
+    user_data = sample_user_data_factory()
+    
+    # 2. Извлекаем пароль и удаляем все, чего нет в модели SQLAlchemy User
+    raw_password = user_data.pop("password", "default_password_2026")
+    user_data.pop("password_hash", None)
+    
+    # Удаляем поля верификации, так как в модели они имеют server_default
+    # и SQLAlchemy может ругаться при попытке их прямой вставки через конструктор,
+    # если они не настроены как обычные колонки.
+    for extra_field in ["is_email_verified", "is_phone_verified", "is_tg_verified"]:
+        user_data.pop(extra_field, None)
+
+    # 3. Создаем объект User и вручную хешируем пароль
+    user = User(**user_data)
+    user.password_hash = AuthService.get_password_hash(raw_password)
+    
     db_session.add(user)
+    # Используем flush, чтобы получить user.id для связанных моделей
     await db_session.flush()
 
-    # 2. Добавляем роль Владельца (100% доля) и нулевой баланс
+    # 4. Добавляем роль Владельца и баланс
     owner_role = Owner(user_id=user.id, current_share=Decimal("1.0000"), is_active=True)
     balance = Balance(user_id=user.id, current_balance=Decimal("0.00"))
 
     db_session.add_all([owner_role, balance])
     await db_session.flush()
+    
+    # Рефрешим, чтобы подгрузить связи, если нужно
+    await db_session.refresh(user)
     return user
 
 @pytest.fixture
 async def mock_investor_profile(
     db_session: AsyncSession,
-    sample_user_data_factory) -> User:
-    """Создает профиль Инвестора с уникальными данными и балансом."""
-    user = User(**sample_user_data_factory())
+    sample_user_data_factory
+) -> User:
+    """Создает профиль Инвестора с уникальными данными и балансом (2026)."""
+    # 1. Получаем данные и очищаем их от полей, которых нет в модели БД
+    user_data = sample_user_data_factory()
+    raw_password = user_data.pop("password", "investor_pass_2026")
+    user_data.pop("password_hash", None)
+    
+    # Удаляем флаги верификации, чтобы не вызвать конфликт со схемами БД
+    for field in ["is_email_verified", "is_phone_verified", "is_tg_verified"]:
+        user_data.pop(field, None)
+
+    # 2. Создаем User и хешируем пароль
+    user = User(**user_data)
+    user.password_hash = AuthService.get_password_hash(raw_password)
+    
     db_session.add(user)
     await db_session.flush()
 
-    # Инвестор с вложением 10 000 и нулевым возвратом на старте
+    # 3. Добавляем роль Инвестора и баланс
     investor_role = Investor(
         user_id=user.id,
         investment_amount=Decimal("10000.00"),
@@ -372,58 +430,82 @@ async def mock_investor_profile(
 
     db_session.add_all([investor_role, balance])
     await db_session.flush()
+    
+    await db_session.refresh(user)
     return user
 
-@pytest.fixture
-async def mock_landlord_profile(db_session: AsyncSession, sample_user_data_factory) -> User:
-    user = User(**sample_user_data_factory())
-    db_session.add(user)
-    await db_session.flush()
 
-    landlord_role = Landlord(user_id=user.id, first_name="Test", last_name="Landlord")
+@pytest_asyncio.fixture
+async def mock_landlord_profile(db_session: AsyncSession, sample_user_data_factory) -> User:
+    user_data = sample_user_data_factory()
+    
+    # 1. Извлекаем пароль, чтобы он не попал в User(**user_data) как лишний аргумент
+    password = user_data.pop("password", "test_password")
+    user_data.pop("password_hash", None)
+
+    # 2. Создаем пользователя. 
+    # Убедитесь, что user_data содержит 'first_name' и 'last_name'.
+    # Если фабрика их не генерирует, добавьте их принудительно:
+    if not user_data.get("first_name"):
+        user_data["first_name"] = "Тест"
+    if not user_data.get("last_name"):
+        user_data["last_name"] = "Лендлорд"
+
+    user = User(**user_data)
+    user.password_hash = AuthService.get_password_hash(password)
+    
+    db_session.add(user)
+    await db_session.flush() # Получаем ID
+
+    # 3. Создаем роль Лендлорда
+    landlord_role = Landlord(user_id=user.id)
     db_session.add(landlord_role)
     await db_session.commit()
     
-    # ВАЖНО ДЛЯ ТЕСТОВ: принудительно подгружаем связь
+    # 4. Подгружаем связь для теста
     from sqlalchemy.orm import selectinload
     from sqlalchemy import select
     stmt = select(User).options(selectinload(User.landlord)).where(User.id == user.id)
     result = await db_session.execute(stmt)
     return result.scalar_one()
 
-# @pytest.fixture
-# async def mock_landlord_profile(
-#     db_session: AsyncSession,
-#     sample_user_data_factory
-# ) -> User:
-#     """Создает профиль Арендодателя с уникальными данными и балансом."""
-#     user = User(**sample_user_data_factory())
-#     db_session.add(user)
-#     await db_session.flush()
-
-#     landlord_role = Landlord(user_id=user.id, first_name="Test", last_name="Landlord")
-#     balance = Balance(user_id=user.id, current_balance=Decimal("0.00"))
-
-#     db_session.add_all([landlord_role, balance])
-#     await db_session.flush()
-#     return user
 
 @pytest.fixture
 async def mock_client_profile(
     db_session: AsyncSession,
     sample_user_data_factory
 ) -> User:
-    """Создает профиль Арендодателя с уникальными данными и балансом."""
-    user = User(**sample_user_data_factory())
-    db_session.add(user)
-    await db_session.flush()
+    """Создает профиль Клиента. Имена сохраняются в User, а не в Client."""
+    # 1. Получаем данные из фабрики
+    user_data = sample_user_data_factory()
+    
+    # 2. ОЧИСТКА: Убираем 'password', так как в модели User его нет (там password_hash)
+    # Если этого не сделать, будет ошибка "TypeError: 'password' is an invalid keyword argument"
+    raw_password = user_data.pop("password", "test_password_2026")
+    user_data.pop("password_hash", None)
 
-    client_role = Client(user_id=user.id, first_name="Test", last_name="Client")
+    # 3. Создаем User (Имена first_name и last_name уже есть в user_data из фабрики)
+    user = User(**user_data)
+    # Хешируем пароль для поля password_hash
+    from app.services.auth import AuthService
+    user.password_hash = AuthService.get_password_hash(raw_password)
+    
+    db_session.add(user)
+    await db_session.flush() # Получаем ID пользователя
+
+    # 4. Создаем связанные сущности БЕЗ имен и фамилий
+    client_role = Client(user_id=user.id) # Теперь здесь только ID
     balance = Balance(user_id=user.id, current_balance=Decimal("0.00"))
 
     db_session.add_all([client_role, balance])
-    await db_session.flush()
+    
+    # 5. Сохраняем всё в базе
+    await db_session.commit()
+    await db_session.refresh(user)
+    
     return user
+
+    
 from app.celery_app import celery_app
 
 # Эта фикстура включит синхронный режим для ВСЕХ тестов

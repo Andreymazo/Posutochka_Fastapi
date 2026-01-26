@@ -1,9 +1,9 @@
 from typing import Any, List, Optional
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from datetime import datetime
 from sqlalchemy import Enum, ForeignKey, Integer, Numeric, DateTime, func, CheckConstraint
-from sqlalchemy.dialects.postgresql import DATERANGE, ExcludeConstraint
+from sqlalchemy.dialects.postgresql import DATERANGE, ExcludeConstraint, Range
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.ext.hybrid import hybrid_property
 
@@ -32,7 +32,7 @@ class Booking(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # Использование DATERANGE для исключения пересечений на уровне БД
-    booking_period: Mapped[Any] = mapped_column(DATERANGE, nullable=False)
+    booking_period: Mapped[Range] = mapped_column(DATERANGE, nullable=False)
     
     # Финансовые показатели
     cost: Mapped[Decimal] = mapped_column(Numeric(precision=10, scale=2), nullable=False)
@@ -82,10 +82,10 @@ class Booking(Base):
     def duration_nights(self) -> int:
         """Возвращает количество ночей бронирования."""
         if self.booking_period:
-            # В PostgreSQL DATERANGE верхняя граница обычно исключается [)
+            # В PostgreSQL DATERANGE верхняя граница обычно исключается [)возвращает объект Range, у которого есть .lower и .upper
             return (self.booking_period.upper - self.booking_period.lower).days
         return 0
-
+ 
     @property
     def total_paid_real(self) -> Decimal:
         """Считает реально поступившие внешние платежи (из модели Payment)."""

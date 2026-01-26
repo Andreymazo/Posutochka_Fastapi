@@ -77,25 +77,38 @@ async def test_send_booking_notification_no_booking(db_session: AsyncSession):
 
 @pytest.mark.asyncio
 async def test_send_booking_notification_no_telegram_id(
-    created_booking: Booking, db_session: AsyncSession
+    created_booking: Booking, 
+    db_session: AsyncSession
 ):
-    """Тест обработки случая, когда у арендодателя нет telegram_id."""
-    # Подготовка: убеждаемся, что telegram_id = None
+    """Тест случая без telegram_id с использованием патча сессии."""
+    # 1. Подготовка данных в сессии теста
     landlord_user = await db_session.get(User, created_booking.landlord.user_id)
     landlord_user.telegram_id = None
-    await db_session.commit()
+    await db_session.flush() # Данные ушли в транзакцию, но сессия жива
 
     booking_id = created_booking.id
 
-    # Мокируем TelegramService
+    # 2. Мокируем TelegramService
     with patch(
-        "app.services.booking_tasks.TelegramService.send_message", new_callable=AsyncMock
+        "app.services.booking_tasks.TelegramService.send_message", 
+        new_callable=AsyncMock
     ) as mock_send:
-        # Выполнение
-        await send_booking_notification(booking_id)
+        
+        # 3. ПАТЧИМ AsyncSessionLocal, чтобы задача использовала db_session теста
+        # Это решает проблему "different loop" и "another operation in progress"
+        with patch("app.services.booking_tasks.AsyncSessionLocal") as mock_session_factory:
+            # Настраиваем контекстный менеджер
+            mock_session_factory.return_value.__aenter__.return_value = db_session
+            # Защищаем сессию от закрытия внутри задачи
+            mock_session_factory.return_value.__aexit__ = AsyncMock()
 
-        # Проверка: send_message НЕ должен быть вызван
+            # Выполнение
+            await send_booking_notification(booking_id)
+
+        # 4. Проверка: отправка не должна быть вызвана
         mock_send.assert_not_called()
+
+        
 @pytest.mark.asyncio
 async def test_send_booking_notification_telegram_fails(
     created_booking: Booking, db_session: AsyncSession

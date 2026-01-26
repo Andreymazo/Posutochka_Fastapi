@@ -48,8 +48,6 @@ async def get_landlord(landlord_id: int, db: AsyncSession = Depends(get_async_db
 async def create_landlord(landlord_data: LandlordCreate, db: AsyncSession = Depends(get_async_db)):
     landlord = Landlord(
         user_id=landlord_data.user_id,
-        first_name=landlord_data.first_name,
-        last_name=landlord_data.last_name,
     )
     db.add(landlord)
     await db.commit()

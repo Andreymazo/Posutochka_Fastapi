@@ -3,39 +3,39 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
+from pydantic import BaseModel, ConfigDict, Field
+from typing import List
+
 class ClientBase(BaseModel):
-    """Base schema for Client - common fields."""
-
-    first_name: str = Field(..., max_length=100)
-    last_name: str = Field(..., max_length=100)
-
+    """
+    Base schema for Client. 
+    Сюда добавляем только специфичные для клиента поля (например, скидки, статус).
+    """
+    # Если специфичных полей пока нет, класс может быть пустым: pass
+    pass
 
 class ClientCreate(ClientBase):
     """Schema for creating a new Client."""
-
     user_id: int
 
-
 class ClientUpdate(BaseModel):
-    """Schema for updating a Client - all fields optional."""
-
-    first_name: str | None = Field(None, max_length=100)
-    last_name: str | None = Field(None, max_length=100)
-
+    """Schema for updating a Client."""
+    # Здесь могут быть поля типа: is_active, preferences и т.д.
+    pass
 
 class ClientRead(ClientBase):
     """Schema for reading Client data (response)."""
-
     id: int
     user_id: int
-    reviews_about_me: list[ReviewRead] = []
-    reviews_i_wrote: list[ReviewRead] = []
+    
+    # В 2026 году принято возвращать либо вложенного юзера, 
+    # либо рассчитывать, что фронтенд возьмет ФИО из UserRead
+    # reviews_about_me и reviews_i_wrote подтянутся через lazy loading или selectinload
+    reviews_about_me: List["ReviewRead"] = []
+    reviews_i_wrote: List["ReviewRead"] = []
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
-
-# Import after class definition to avoid circular import
-from app.schemas.review import ReviewRead  # noqa: E402
-
-# Rebuild model to resolve forward references
+# Импорты для избежания циклических ссылок
+from app.schemas.review import ReviewRead
 ClientRead.model_rebuild()

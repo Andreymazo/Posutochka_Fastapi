@@ -16,7 +16,7 @@ from sqlalchemy.dialects.postgresql import DATERANGE
 from datetime import date
 import uuid
 import aioboto3
-from app.models import Photo
+from app.models import Photo, Booking
 
 router = APIRouter(prefix="/apartments", tags=["apartments"])
 
@@ -60,12 +60,11 @@ async def search_apartments(
     radius: float = 1000.0,
     db: AsyncSession = Depends(get_async_db)
 ):
-    # 1. Создаем диапазон для поиска
-    requested_range = (check_in, check_out)
+    
+    requested_range = (check_in, check_out) 
 
-    # 2. Подзапрос: находим апартаменты, которые заблокированы
-    # Оператор '&&' в Postgres проверяет перекрытие диапазонов
-    blocked_subquery = (
+    # 1. Квартиры, занятые через Availability (блокировки)
+    blocked_avail_subquery = (
         select(ApartmentAvailability.apartment_id)
         .where(
             ApartmentAvailability.blocked_period.overlaps(requested_range),
@@ -73,22 +72,32 @@ async def search_apartments(
         )
     )
 
-    # 3. Основной запрос: Поиск + Гео + Проверка доступности
+    # 2. Квартиры, уже забронированные (Bookings)
+    # Используем overlaps или нативный &&
+    blocked_bookings_subquery = (
+        select(Booking.apartment_id)
+        .where(
+            Booking.booking_period.overlaps(requested_range),
+            Booking.booking_status != "cancelled"  # Отмененные не считаем
+        )
+    )
+
+    # 3. Финальный запрос
     user_geo = func.ST_GeographyFromText(f"POINT({lon} {lat})")
-    # Для теста: сначала просто проверим гео, без дат
-    #user_geo = func.ST_SetSRID(func.ST_MakePoint(lon, lat), 4326)
     query = (
         select(Apartment)
         .options(selectinload(Apartment.photos))
         .where(
-            # Исключаем тех, у кого есть пересечение с заблокированным периодом
-            ~Apartment.id.in_(blocked_subquery),
+            # Исключаем из обеих таблиц
+            ~Apartment.id.in_(blocked_avail_subquery),
+            ~Apartment.id.in_(blocked_bookings_subquery),
             func.ST_DWithin(cast(Apartment.location, Geography), user_geo, radius)
         )
     )
 
     result = await db.execute(query)
     return result.scalars().all()
+
 
 
 @router.get("/", response_model=list[ApartmentRead])

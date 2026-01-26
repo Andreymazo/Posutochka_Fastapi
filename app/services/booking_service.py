@@ -93,40 +93,47 @@ class BookingService:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Минимальный срок проживания для выбранных дат: {rule.min_stay_days} дней",
                 )
-        # 4. If available - create the booking object
+       # 4. Создаем объекты
         new_booking = Booking(
             booking_period=booking_period,
             cost=booking_data.cost,
-            booking_status=booking_data.booking_status.value,
+            booking_status=booking_data.booking_status,
             landlord_id=booking_data.landlord_id,
             client_id=client_id,
             apartment_id=booking_data.apartment_id,
         )
-
         db.add(new_booking)
-             # --- НОВАЯ ЛОГИКА ИНТЕГРАЦИИ ---
-        # 5. Автоматически создаем блокировку в календаре доступности
-        # Чтобы наш поиск /search сразу "увидел", что даты заняты
+
+        # 5. Создаем блокировку
         availability_block = ApartmentAvailability(
             apartment_id=booking_data.apartment_id,
             blocked_period=booking_period,
-            is_blocked=True,
-            # Можно добавить примечание, чтобы лендлорд видел, что это бронь
-            # description=f"Бронирование #{new_booking.id}" 
+            is_blocked=True
         )
         db.add(availability_block)
+
+        # 6. Сначала выполняем flush, чтобы получить ID объектов, но не закрывать транзакцию
+        await db.flush()
+        
+        # Сохраняем ID, чтобы не обращаться к объекту после коммита (избегаем селекта для refresh)
+        booking_id = new_booking.id
+
+        # 7. Фиксируем изменения
         await db.commit()
 
-        # Вместо refresh загружаем всё необходимое одним чистым запросом
+        # 8. Финальный запрос с использованием сохраненного ID
+        # Это гарантирует, что мы начинаем новую чистую операцию в сессии
         final_query = (
             select(Booking)
-            .where(Booking.id == new_booking.id)
+            .where(Booking.id == booking_id)
             .options(
                 selectinload(Booking.payments),
                 joinedload(Booking.apartment).selectinload(Apartment.availability_rules)
             )
         )
+        
         result = await db.execute(final_query)
+        # В 2026 году .unique() обязателен при использовании joinedload с коллекциями
         return result.unique().scalar_one()
 
 
