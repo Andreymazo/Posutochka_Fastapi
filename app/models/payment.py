@@ -18,7 +18,8 @@ class Payment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     amount: Mapped[float] = mapped_column(Numeric(precision=10, scale=2), nullable=False)
-    payment_date: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    payment_date: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now()) # Использует локальное время сервера без TZ
+    
     payment_status: Mapped[str] = mapped_column(
         Enum("paid", "pending", "failed", name="payment_status", create_type=False),
         nullable=False,

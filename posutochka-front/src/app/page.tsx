@@ -207,7 +207,7 @@ useEffect(() => {
               <div className="w-1/3 bg-gray-200">
                 {/* Если есть фото, выводим его, если нет — иконку */}
                 {apt.photos && apt.photos[0] ? (
-                  <img src={apt.photos[0].url} className="w-full h-full object-cover" alt="" />
+                  <img src={`http://localhost:9000${apt.photos[0].url}`} className="w-full h-full object-cover" alt="" />
                 ) : <div className="w-full h-full flex items-center justify-center">🏠</div>}
               </div>
               <div className="w-2/3 p-3 flex flex-col justify-between">

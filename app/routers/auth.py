@@ -11,7 +11,8 @@ import redis.asyncio as redis
 from app.services.auth import get_current_user
 import os
 from app.core.redis import get_redis
-import uuid 
+import uuid
+from app.models import Landlord, Client
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -92,21 +93,38 @@ async def register(
                 last_name=user_data.last_name
             )
             db.add(new_user)
+         # СНАЧАЛА выполняем flush, чтобы получить ID пользователя для связанных таблиц
+           # 1. СНАЧАЛА flush, чтобы получить ID
+        await db.flush()
 
-        # 3. СОХРАНЕНИЕ И УСТАНОВКА ЛИМИТА
         try:
+            # 2. ДОБАВЛЯЕМ РОЛЬ (в ту же транзакцию)
+            if user_data.role == "landlord":
+                role_exists = (await db.execute(select(Landlord).where(Landlord.user_id == new_user.id))).scalar_one_or_none()
+                if not role_exists:
+                    db.add(Landlord(user_id=new_user.id))
+            
+            elif user_data.role == "client":
+                role_exists = (await db.execute(select(Client).where(Client.user_id == new_user.id))).scalar_one_or_none()
+                if not role_exists:
+                    db.add(Client(user_id=new_user.id))
+
+            # 3. ЕДИНЫЙ COMMIT для всего (юзер + роль)
             await db.commit()
             await db.refresh(new_user)
             
-            # Ставим блокировку на Email в Redis на 60 секунд
+            # 4. УСТАНОВКА ЛИМИТА В REDIS (после успешной базы)
             await redis_client.set(limit_key, "1", ex=60)
             
-        except Exception:
+        except Exception as e:
             await db.rollback()
+            print(f"--- [DEBUG 2026] Ошибка БД: {e} ---")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Ошибка при регистрации. Попробуйте позже."
+                detail="Ошибка при сохранении данных. Возможно, такой email или телефон уже занят."
             )
+
+
         # 3.1. Генерация токена для Telegram
         tg_link_token = str(uuid.uuid4())
         

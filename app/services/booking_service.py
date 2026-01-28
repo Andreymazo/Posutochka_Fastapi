@@ -34,7 +34,7 @@ class BookingService:
             HTTPException: If dates are already booked or unavailable
         """
         # Create Range object from start_date and end_date
-        booking_period = Range(booking_data.start_date, booking_data.end_date, bounds="[)")
+        booking_period = Range(booking_data.check_in, booking_data.check_out, bounds="[)")
          # 1. Формируем два условия проверки занятости
         # Условие А: Есть ли перекрывающиеся активные брони
         booking_exists = select(Booking.id).where(
@@ -84,7 +84,7 @@ class BookingService:
         availability_rules = result.scalars().all()
 
         # Calculate booking duration
-        booking_days = (booking_data.end_date - booking_data.start_date).days
+        booking_days = (booking_data.check_out - booking_data.check_in).days
 
         # Check if booking meets minimum stay requirements
         for rule in availability_rules:
@@ -94,15 +94,32 @@ class BookingService:
                     detail=f"Минимальный срок проживания для выбранных дат: {rule.min_stay_days} дней",
                 )
        # 4. Создаем объекты
+              # --- ПОДГОТОВКА ДАННЫХ (вставляем перед пунктом 1) ---
+        # Получаем объект апартамента из БД для получения актуальной цены и владельца
+        apt_query = select(Apartment).where(Apartment.id == booking_data.apartment_id)
+        apt_result = await db.execute(apt_query)
+        apt = apt_result.scalar_one_or_none()
+
+        if not apt:
+            raise HTTPException(status_code=404, detail="Апартаменты не найдены")
+
+        # Вычисляем количество дней и итоговую стоимость на стороне сервера
+        booking_days = (booking_data.check_out - booking_data.check_in).days
+        calculated_cost = apt.price_per_night * booking_days
+
+        # ... (здесь идут твои проверки busy_query и min_stay_query) ...
+
+        # --- ИСПРАВЛЕННЫЙ ПУНКТ 4 (Создание объекта) ---
         new_booking = Booking(
             booking_period=booking_period,
-            cost=booking_data.cost,
-            booking_status=booking_data.booking_status,
-            landlord_id=booking_data.landlord_id,
-            client_id=client_id,
+            cost=calculated_cost,            # Используем вычисленную сервером сумму
+            booking_status="pending",        # Ставим начальный статус
+            landlord_id=apt.landlord_id,     # Берем реального владельца из БД
+            client_id=client_id,             # Получено из токена в роутере
             apartment_id=booking_data.apartment_id,
         )
         db.add(new_booking)
+
 
         # 5. Создаем блокировку
         availability_block = ApartmentAvailability(
@@ -219,25 +236,9 @@ class BookingService:
         result = await db.execute(query)
         return list(result.scalars().all())
 
-    @staticmethod
     async def update_booking(
         db: AsyncSession, booking_id: int, booking_data: BookingUpdate
     ) -> Booking:
-        """
-        Update a booking.
-
-        Args:
-            db: Async database session
-            booking_id: ID of the booking to update
-            booking_data: Updated booking data
-
-        Returns:
-            Updated booking object
-
-        Raises:
-            HTTPException: If booking not found
-        """
-        # Get existing booking
         booking = await BookingService.get_booking_by_id(db, booking_id)
 
         update_data = booking_data.model_dump(exclude_unset=True)
@@ -247,17 +248,17 @@ class BookingService:
             update_data["booking_status"] = update_data["booking_status"].value
 
         # Handle date updates - need to reconstruct the Range if either date is updated
-        start_date = update_data.pop("start_date", None)
-        end_date = update_data.pop("end_date", None)
+        check_in = update_data.pop("check_in", None)
+        check_out = update_data.pop("check_out", None)
 
-        if start_date or end_date:
+        if check_in or check_out:
             # Get current dates from booking_period
             current_start = booking.booking_period.lower if booking.booking_period else None
             current_end = booking.booking_period.upper if booking.booking_period else None
 
             # Use new dates if provided, otherwise keep current
-            new_start = start_date if start_date else current_start
-            new_end = end_date if end_date else current_end
+            new_start = check_in if check_in else current_start
+            new_end = check_out if check_out else current_end
 
             # Create new Range with updated dates
             booking.booking_period = Range(new_start, new_end, bounds="[)")

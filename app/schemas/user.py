@@ -18,7 +18,7 @@ class UserCreate(UserBase):
     # Чтобы ТЕСТЫ не падали прямо сейчас, можно временно сделать так:
     # first_name: str = Field("Имя", min_length=2) 
     # last_name: str = Field("Фамилия", min_length=2)
-
+    role: str  # 'client' или 'landlord'
     @field_validator('phone_number')
     @classmethod
     def validate_phone(cls, v: str) -> str:

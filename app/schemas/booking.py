@@ -18,26 +18,22 @@ class BookingStatus(str, Enum):
 class BookingBase(BaseModel):
     """Base schema for Booking - common fields."""
 
-    start_date: date
-    end_date: date
+    check_in: date
+    check_out: date
     cost: float = Field(..., gt=0)
     booking_status: BookingStatus
 
 
-class BookingCreate(BookingBase):
-    """Schema for creating a new Booking."""
-    start_date: date
-    end_date: date
-    cost: float = Field(..., ge=0.01) 
-    landlord_id: int
-    client_id: int
+class BookingCreate(BaseModel):
     apartment_id: int
-    booking_status: str = "pending"
+    check_in: date
+    check_out: date
+
 
     
     @model_validator(mode='after')
     def check_dates(self) -> Self:
-        if self.end_date <= self.start_date:
+        if self.check_out <= self.check_in:
             raise ValueError("Дата выезда должна быть позже даты заезда")
         return self
 
@@ -45,8 +41,8 @@ class BookingCreate(BookingBase):
 class BookingUpdate(BaseModel):
     """Schema for updating a Booking - all fields optional."""
 
-    start_date: date | None = None
-    end_date: date | None = None
+    check_in: date | None = None
+    check_out: date | None = None
     cost: float | None = Field(None, gt=0)
     booking_status: BookingStatus | None = None
 
@@ -66,8 +62,8 @@ class BookingRead(BookingBase):
         """Extract start_date and end_date from booking_period Range object."""
         if hasattr(data, "booking_period") and data.booking_period:
             # Extract boundaries from Postgres Range object
-            data.start_date = data.booking_period.lower
-            data.end_date = data.booking_period.upper
+            data.check_in = data.booking_period.lower
+            data.check_out = data.booking_period.upper
         return data
 
     model_config = {"from_attributes": True}

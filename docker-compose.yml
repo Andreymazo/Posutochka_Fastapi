@@ -79,6 +79,7 @@ services:
       until (/usr/bin/mc alias set myminio http://minio:9000 admin strong_password_2026) do echo 'Waiting for MinIO...' && sleep 1; done;
       /usr/bin/mc mb --ignore-existing myminio/apartments;
       /usr/bin/mc anonymous set download myminio/apartments;
+      /usr/bin/mc anonymous set public myminio/apartments;
       exit 0;
       "
 

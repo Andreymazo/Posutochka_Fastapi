@@ -20,8 +20,8 @@ async def test_create_booking_busy_dates(db_session, created_apartment, mock_lan
     
     booking_data = BookingCreate(
         apartment_id=created_apartment.id,
-        start_date=start,
-        end_date=end,
+        check_in=start,
+        check_out=end,
         cost=1000.0,
         booking_status="pending", # Используем строку из вашей модели
         landlord_id=mock_landlord_profile.id,
@@ -32,6 +32,7 @@ async def test_create_booking_busy_dates(db_session, created_apartment, mock_lan
         await BookingService.create_new_booking(db_session, booking_data, client_id=999)
     assert exc.value.status_code == 400
     assert "заняты" in exc.value.detail
+
 @pytest.mark.asyncio
 async def test_create_booking_min_stay_violation(db_session, created_apartment, mock_landlord_profile):
     """Проверка нарушения правила минимального срока проживания."""
@@ -45,8 +46,8 @@ async def test_create_booking_min_stay_violation(db_session, created_apartment, 
     # Пытаемся забронировать на 2 дня (10-е по 12-е)
     booking_data = BookingCreate(
         apartment_id=created_apartment.id,
-        start_date=date(2026, 9, 10),
-        end_date=date(2026, 9, 12),
+        check_in=date(2026, 9, 10),
+        check_out=date(2026, 9, 12),
         cost=500.0,
         booking_status="pending", # Строка из вашей модели
         landlord_id=mock_landlord_profile.id,
@@ -97,8 +98,8 @@ async def test_create_booking_min_stay_error_trigger(db_session, created_apartme
     # Бронируем только на 2 ночи
     booking_data = BookingCreate(
         apartment_id=created_apartment.id,
-        start_date=date(2026, 1, 5),
-        end_date=date(2026, 1, 7),
+        check_in=date(2026, 1, 5),
+        check_out=date(2026, 1, 7),
         cost=100.0,
         booking_status="pending",
         landlord_id=mock_landlord_profile.id,
@@ -160,8 +161,8 @@ async def test_create_booking_success_and_min_stay_pass(
     # created_client уже содержит правильный id из таблицы client
     booking_data = BookingCreate(
         apartment_id=created_apartment.id,
-        start_date=date(2026, 3, 10),
-        end_date=date(2026, 3, 14),
+        check_in=date(2026, 3, 10),
+        check_out=date(2026, 3, 14),
         cost=400.0,
         booking_status="pending",
         landlord_id=landlord_record.id,
@@ -185,8 +186,8 @@ async def test_update_booking_full(db_session, created_booking):
     new_start = date(2026, 11, 20)
     new_end = date(2026, 11, 25)
     update_data = BookingUpdate(
-        start_date=new_start,
-        end_date=new_end,
+        check_in=new_start,
+        check_out=new_end,
         cost=999.99
     )
     
