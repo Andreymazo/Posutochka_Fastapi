@@ -24,13 +24,11 @@ class BookingBase(BaseModel):
     booking_status: BookingStatus
 
 
-class BookingCreate(BaseModel):
+class BookingCreate(BookingBase):
     apartment_id: int
     check_in: date
     check_out: date
-
-
-    
+  
     @model_validator(mode='after')
     def check_dates(self) -> Self:
         if self.check_out <= self.check_in:

@@ -42,7 +42,7 @@ cp .env.example .env
 docker run --name containerpostgres \
     -e POSTGRES_PASSWORD=123456 \
     -e POSTGRES_DB=posutochka \
-    -d -p 5433:5432 postgis/postgis:16-3.4
+    -d -p 5434:5432 postgis/postgis:16-3.4
 docker volume ls
 docker volume rm $(docker volume ls -q)
 # Примените миграции базы данных
@@ -844,3 +844,32 @@ ____________________________
     Фронтенд: Теперь можно добавить красивый редирект на страницу «Мои бронирования», чтобы пользователь сразу увидел результат.
 
 Удачи в дальнейшей разработке проекта «Посуточка»! Обращайтесь, если возникнут вопросы по Celery или интеграции эквайринга. 🚀
+
+__________________________________
+    async def test_delete_user(self, client: AsyncClient, sample_user_data: dict[str, Any]) -> None:
+        """Test deleting a user."""
+        # Create a user
+        create_response = await client.post("/users/", json=sample_user_data)
+>       user_id = create_response.json()["id"]
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'id'
+
+client     = <httpx.AsyncClient object at 0x7b6023dd3830>
+create_response = <Response [422 Unprocessable Entity]>
+sample_user_data = {'email': 'user_9af5e8@example.com', 'first_name': 'Имя_9af5e8', 'last_name': 'Фамилия_9af5e8', 'password': 'secure_password_2026', ...}
+self       = <tests.test_users.TestUserEndpoints object at 0x7b6023db0e60>
+
+tests/test_users.py:131: KeyError
+============================================================================================ warnings summary ============================================================================================
+../../.pyenv/versions/posutochka_fasapi/lib/python3.12/site-packages/passlib/utils/__init__.py:854
+  /home/andreymazo/.pyenv/versions/posutochka_fasapi/lib/python3.12/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+tests/test_users.py::TestUserEndpoints::test_delete_user
+  /home/andreymazo/Projects/Posutochka/tests/conftest.py:540: DeprecationWarning: Call to deprecated close. (Use aclose() instead) -- Deprecated since version 5.0.1.
+    await redis.close()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================================================================================== short test summary info =========================================================================================
+pytest tests/ -v
+FAILED tests/test_users.py::TestUserEndpoints::test_delete_user - KeyError: 'id'

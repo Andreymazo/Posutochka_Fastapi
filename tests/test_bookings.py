@@ -114,7 +114,7 @@ class TestBookingDateRange:
         await db_session.refresh(booking)
         # 2. Обновляем дату окончания через PATCH запрос
         # В 2026 году мы ожидаем, что сервис корректно пересоберет Range
-        update_data = {"end_date": "2026-05-10"}
+        update_data = {"check_out": "2026-05-10"}
 
         # Обязательно добавляем await
         response = await client.patch(f"/bookings/{booking.id}", json=update_data)

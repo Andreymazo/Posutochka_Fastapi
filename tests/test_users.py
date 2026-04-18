@@ -127,7 +127,10 @@ class TestUserEndpoints:
     async def test_delete_user(self, client: AsyncClient, sample_user_data: dict[str, Any]) -> None:
         """Test deleting a user."""
         # Create a user
-        create_response = await client.post("/users/", json=sample_user_data)
+        create_response = await client.post("/users/", json=sample_user_data)     
+         # ДОБАВЬТЕ ЭТИ ДВЕ СТРОКИ ДЛЯ ДИАГНОСТИКИ:
+        print("\nSTATUS CODE:", create_response.status_code)
+        print("RESPONSE BODY:", create_response.text)
         user_id = create_response.json()["id"]
 
         # Delete the user

@@ -1,52 +1,52 @@
 version: '3.8'
 
 services:
-  # 1. База данных PostGIS (с поддержкой гео-запросов и GIST индексов)
-  db:
-    image: postgis/postgis:16-3.4
-    container_name: posutochka_postgres
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123456
-      POSTGRES_DB: posutochka
-    ports:
-      - "5433:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d posutochka"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    stop_grace_period: 3s
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'        # Использовать не более половины одного ядра
-          memory: 1G       # Лимит памяти (для frontend можно поставить 1G)
-        reservations:
-          memory: 128M       # Гарантированный минимум
+  # # 1. База данных PostGIS (с поддержкой гео-запросов и GIST индексов)
+  # db:
+  #   image: postgis/postgis:16-3.4
+  #   container_name: posutochka_postgres
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: 123456
+  #     POSTGRES_DB: posutochka
+  #   ports:
+  #     - "5433:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres -d posutochka"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
+  #   stop_grace_period: 3s
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '0.5'        # Использовать не более половины одного ядра
+  #         memory: 1G       # Лимит памяти (для frontend можно поставить 1G)
+  #       reservations:
+  #         memory: 128M       # Гарантированный минимум
 
-  # 2. Redis — Брокер для Celery и кэш
-  redis:
-    image: redis:7-alpine
-    container_name: posutochka_redis
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    stop_grace_period: 3s
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'        # Использовать не более половины одного ядра
-          memory: 512M       # Лимит памяти (для frontend можно поставить 1G)
-        reservations:
-          memory: 128M       # Гарантированный минимум
+  # # 2. Redis — Брокер для Celery и кэш
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: posutochka_redis
+  #   ports:
+  #     - "6379:6379"
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
+  #   stop_grace_period: 3s
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '0.5'        # Использовать не более половины одного ядра
+  #         memory: 512M       # Лимит памяти (для frontend можно поставить 1G)
+  #       reservations:
+  #         memory: 128M       # Гарантированный минимум
 
   # 3. MinIO — Хранилище фото (S3-совместимое)
   minio:
@@ -90,17 +90,20 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:123456@db:5432/posutochka
-      - CELERY_BROKER_URL=redis://redis:6379/0
+      # - DATABASE_URL=postgresql+asyncpg://postgres:123456@db:5434/posutochka
+         # Проверьте, чтобы тут НЕ БЫЛО слова "db". Указываем host.docker.internal и порт 5434!
+      - DATABASE_URL=postgresql+asyncpg://postgres:123456@host.docker.internal:5434/posutochka
+      # - CELERY_BROKER_URL=redis://redis:6380/0
+      - CELERY_BROKER_URL=redis://host.docker.internal:6380/0
       - MINIO_ENDPOINT=http://minio:9000
       - MINIO_ACCESS_KEY=admin
       - MINIO_SECRET_KEY=strong_password_2026
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+    # depends_on:
+    #   db:
+    #     condition: service_healthy
+    #   redis:
+    #     condition: service_healthy
     volumes:
       - .:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -112,17 +115,20 @@ services:
             memory: 512M       # Лимит памяти (для frontend можно поставить 1G)
           reservations:
             memory: 128M       # Гарантированный минимум
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
   # 5. Celery Worker — Исполнитель фоновых задач (уведомления)
   worker:
     build: .
     container_name: posutochka_worker
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - DATABASE_URL=postgresql+asyncpg://postgres:123456@db:5432/posutochka
-      - CELERY_BROKER_URL=redis://redis:6379/0
-    depends_on:
-      redis:
-        condition: service_healthy
+      - DATABASE_URL=postgresql+asyncpg://postgres:123456@db:5434/posutochka
+      # - CELERY_BROKER_URL=redis://redis:6380/0
+      - CELERY_BROKER_URL=redis://host.docker.internal:6380/0
+    # depends_on:
+    #   redis:
+    #     condition: service_healthy
     volumes:
       - .:/app
     command: celery -A app.celery_app.celery_app worker --loglevel=info
@@ -134,16 +140,18 @@ services:
           memory: 512M       # Лимит памяти (для frontend можно поставить 1G)
         reservations:
           memory: 128M       # Гарантированный минимум
-
+    extra_hosts:
+        - "host.docker.internal:host-gateway" 
   # 6. Celery Beat — Планировщик задач
   beat:
     build: .
     container_name: posutochka_beat
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-    depends_on:
-      redis:
-        condition: service_healthy
+      # - CELERY_BROKER_URL=redis://redis:6380/0
+      - CELERY_BROKER_URL=redis://host.docker.internal:6380/0
+    # depends_on:
+    #   redis:
+    #     condition: service_healthy
     volumes:
       - .:/app
     command: celery -A app.celery_app.celery_app beat --loglevel=info
@@ -155,6 +163,8 @@ services:
           memory: 512M       # Лимит памяти (для frontend можно поставить 1G)
         reservations:
           memory: 128M       # Гарантированный минимум
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Эта строчка сообщает Docker, что нужно прописать IP-адрес шлюза вашей основной машины в файл /etc/hosts внутри каждого контейнера под именем host.docker.internal [09ef8ca21047]. Без этого контейнеры просто не поймут, куда отправлять запросы [09ef8ca21047].
 
   # 7. Фронтенд Next.js (Новый сервис!)
   frontend:

@@ -6,10 +6,12 @@ import uuid
 
 @pytest.mark.asyncio
 async def test_login_success(client: AsyncClient, db_session, sample_user_data_factory):
-    user_data = sample_user_data_factory()
-    
+    original_data = sample_user_data_factory()
+    user_data = original_data.copy() 
     # 1. Извлекаем чистый пароль для логина
+    # Теперь удаление ключей безопасно для остальных тестов
     raw_password = user_data.pop("password") 
+    user_data.pop("password_hash", None)
     
     # 2. Убираем password_hash, если хотим захешировать его правильно через сервис
     user_data.pop("password_hash", None)
@@ -84,7 +86,7 @@ async def test_get_current_user_user_not_found(client: AsyncClient):
     response = await client.get("/documents/1", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 401
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_register_user_success(client: AsyncClient, db_session):
     """Тест успешной регистрации нового пользователя."""
     unique_email = f"user_{uuid.uuid4().hex[:6]}@example.com"
@@ -94,7 +96,8 @@ async def test_register_user_success(client: AsyncClient, db_session):
         "password": "strongpassword123",
         "telegram_username": "traveler_tg",
         "first_name": "Иван", 
-        "last_name": "Иванов"   
+        "last_name": "Иванов",
+        "role": "user"
     }
     
     response = await client.post("/auth/register", json=payload)

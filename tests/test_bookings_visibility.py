@@ -42,8 +42,8 @@ async def test_booking_blocks_apartment_visibility(
         apartment_id=created_apartment.id,
         landlord_id=created_apartment.landlord_id,
         client_id=created_client.id,
-        start_date=check_in,
-        end_date=check_out,
+        check_in=check_in,
+        check_out=check_out,
         cost=Decimal("250.00"),
         booking_status=BookingStatus.confirmed
     )

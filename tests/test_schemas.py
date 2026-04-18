@@ -36,7 +36,8 @@ class TestUserSchemas:
             password="securepass123",
             first_name="иван",    # Проверим заодно капитализацию
             last_name="иванов",
-            telegram_username="@testuser"
+            telegram_username="@testuser",
+            role="user"
         )
         
         assert user.email == "test@example.com"
@@ -165,8 +166,8 @@ class TestBookingSchemas:
 
         # Используем даты из февраля 2026 года
         booking = BookingCreate(
-            start_date=date(2026, 2, 15),
-            end_date=date(2026, 2, 20),
+            check_in=date(2026, 2, 15), 
+            check_out=date(2026, 2, 20),  
             cost=250.0,
             booking_status=BookingStatus.pending,
             landlord_id=1,
@@ -176,11 +177,11 @@ class TestBookingSchemas:
         assert booking.cost == 250.0
         assert booking.booking_status == BookingStatus.pending
 
-    def test_booking_create_valid(self):
+    def test_booking_create_valid_from_dict(self):
         """Тест создания схемы со всеми обязательными полями."""
         data = {
-            "start_date": date(2026, 1, 1),
-            "end_date": date(2026, 1, 2),
+            "check_in": date(2026, 1, 1),
+            "check_out": date(2026, 1, 2),
             "cost": 500.0,
             "booking_status": "confirmed",
             "landlord_id": 1,
@@ -191,7 +192,7 @@ class TestBookingSchemas:
         # или BookingCreate.model_validate(data)
         obj = BookingCreate(**data)
         assert obj.cost == 500.0
-        assert obj.start_date < obj.end_date
+        assert obj.check_in < obj.check_out 
 
 
     def test_booking_status_enum(self) -> None:
@@ -432,8 +433,8 @@ def test_booking_schema_date_equal_validation():
         "apartment_id": 1,
         "landlord_id": 1,
         "client_id": 1,
-        "start_date": date(2026, 1, 20),
-        "end_date": date(2026, 1, 20),
+        "check_in": date(2026, 1, 20),
+        "check_out": date(2026, 1, 20),
         "cost": 1000.0,
         "booking_status": "pending"
     }
@@ -456,8 +457,8 @@ def test_booking_read_split_range_coverage():
         "landlord_id": 1,
         "client_id": 1,
         "apartment_id": 1,
-        "start_date": date(2026, 1, 1),
-        "end_date": date(2026, 1, 2),
+        "check_in": date(2026, 1, 1),
+        "check_out": date(2026, 1, 2),
         "cost": 100.0,
         "booking_status": "confirmed",
         "payments": []
@@ -478,13 +479,13 @@ def test_booking_read_split_range_coverage():
         payments = []
 
     obj_from_orm = BookingRead.model_validate(MockBooking())
-    assert obj_from_orm.start_date == date(2026, 2, 1)
+    assert obj_from_orm.check_in == date(2026, 2, 1)
 
 def test_booking_create_valid():
     """Тест создания схемы со всеми обязательными полями."""
     data = {
-        "start_date": date(2026, 1, 1),
-        "end_date": date(2026, 1, 2),
+        "check_in": date(2026, 1, 1),
+        "check_out": date(2026, 1, 2),
         "cost": 500.0,
         "booking_status": "confirmed",
         "landlord_id": 1,

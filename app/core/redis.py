@@ -1,7 +1,10 @@
 import redis.asyncio as redis
 
-# Параметры из твоего docker-compose. localhost для локльной и редис для контейнеров
-REDIS_URL = "redis://redis:6379/0" 
+REDIS_URL = "redis://localhost:6380/0" 
 
-async def get_redis():
-    return redis.from_url(REDIS_URL, decode_responses=True)
+# Создаем пул соединений один раз при импорте модуля
+redis_pool = redis.ConnectionPool.from_url(REDIS_URL, decode_responses=True)
+
+async def get_redis() -> redis.Redis:
+    """Возвращает клиент Redis, использующий глобальный пул."""
+    return redis.Redis(connection_pool=redis_pool)

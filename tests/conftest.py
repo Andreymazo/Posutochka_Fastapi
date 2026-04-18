@@ -131,7 +131,8 @@ def sample_user_data() -> dict[str, Any]:
         "password": "secure_password_2026",
         "first_name": f"Имя_{unique_suffix}",
         "last_name": f"Фамилия_{unique_suffix}",
-        "telegram_username": f"tg_{unique_suffix}"
+        "telegram_username": f"tg_{unique_suffix}",
+        "role": "user"
     }
 
 @pytest.fixture
@@ -537,4 +538,4 @@ async def clear_redis():
     from app.core.redis import get_redis
     redis = await get_redis()
     await redis.flushall()
-    await redis.close()
+    await redis.aclose()

@@ -32,90 +32,100 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def seed_users() -> list[User]:
-    """Create sample users in the database."""
-    users_data: list[dict[str, str | None]] = [
-        {
-            "email": "landlord1@example.com",
-            "phone_number": "+1234567890",
-            "password_hash": "hashed_password_landlord1",  # In production, use proper hashing
-            "role": "landlord",
-            "telegram_username": "@landlord1",
-        },
-        {
-            "email": "landlord2@example.com",
-            "phone_number": "+1234567891",
-            "password_hash": "hashed_password_landlord2",
-            "role": "landlord",
-            "telegram_username": "@landlord2",
-        },
-        {
-            "email": "client1@example.com",
-            "phone_number": "+1234567892",
-            "password_hash": "hashed_password_client1",
-            "role": "client",
-            "telegram_username": "@client1",
-        },
-        {
-            "email": "client2@example.com",
-            "phone_number": "+1234567893",
-            "password_hash": "hashed_password_client2",
-            "role": "client",
-            "telegram_username": None,
-        },
-    ]
+# def seed_users() -> list[User]:
+#     """Create sample users in the database."""
+#     users_data: list[dict[str, str | None]] = [
+#         {
+#             "email": "landlord1@example.com",
+#             "phone_number": "+1234567890",
+#             "password_hash": "hashed_password_landlord1",
+#             "role": "landlord",
+#             "telegram_username": "@landlord1",
+#             "first_name": "John",       # 👈 Добавили обязательное поле
+#             "last_name": "Smith",       # 👈 Добавили обязательное поле
+#         },
+#         {
+#             "email": "landlord2@example.com",
+#             "phone_number": "+1234567891",
+#             "password_hash": "hashed_password_landlord2",
+#             "role": "landlord",
+#             "telegram_username": "@landlord2",
+#             "first_name": "Maria",      # 👈 Добавили
+#             "last_name": "Garcia",      # 👈 Добавили
+#         },
+#         {
+#             "email": "client1@example.com",
+#             "phone_number": "+1234567892",
+#             "password_hash": "hashed_password_client1",
+#             "role": "client",
+#             "telegram_username": "@client1",
+#             "first_name": "Alice",      # 👈 Добавили
+#             "last_name": "Johnson",      # 👈 Добавили
+#         },
+#         {
+#             "email": "client2@example.com",
+#             "phone_number": "+1234567893",
+#             "password_hash": "hashed_password_client2",
+#             "role": "client",
+#             "telegram_username": None,
+#             "first_name": "Bob",        # 👈 Добавили
+#             "last_name": "Williams",    # 👈 Добавили
+#         },
+#     ]
 
-    users = []
-    for data in users_data:
-        user = User(
-            email=data["email"],
-            phone_number=data["phone_number"],
-            password_hash=data["password_hash"],
-            role=data["role"],
-            telegram_username=data["telegram_username"],
-        )
-        users.append(user)
-    return users
-
-
-def seed_landlords(users: list[User]) -> list[Landlord]:
-    """Create sample landlords linked to users with 'landlord' role."""
-    landlords_data = [
-        {"first_name": "John", "last_name": "Smith"},
-        {"first_name": "Maria", "last_name": "Garcia"},
-    ]
-
-    landlords = []
-    landlord_users = [u for u in users if u.role == "landlord"]
-
-    for user, data in zip(landlord_users, landlords_data, strict=False):
-        landlord = Landlord(
-            user_id=user.id,
-            first_name=data["first_name"],
-            last_name=data["last_name"],
-        )
-        landlords.append(landlord)
-    return landlords
+#     users = []
+#     for data in users_data:
+#         user = User(
+#             email=data["email"],
+#             phone_number=data["phone_number"],
+#             password_hash=data["password_hash"],
+#             telegram_username=data["telegram_username"],
+#             first_name=data["first_name"], # 👈 Передаем в модель
+#             last_name=data["last_name"],   # 👈 Передаем в модель
+#         )
+#         users.append(user)
+#     return users
 
 
-def seed_clients(users: list[User]) -> list[Client]:
-    """Create sample clients linked to users with 'client' role."""
-    clients_data = [
-        {"first_name": "Alice", "last_name": "Johnson"},
-        {"first_name": "Bob", "last_name": "Williams"},
-    ]
 
-    clients = []
-    client_users = [u for u in users if u.role == "client"]
+# def seed_landlords(users: list[User]) -> list[Landlord]:
+#     """Create sample landlords linked to users with 'landlord' role."""
+#     landlords_data = [
+#         {"first_name": "John", "last_name": "Smith"},
+#         {"first_name": "Maria", "last_name": "Garcia"},
+#     ]
 
-    for user, data in zip(client_users, clients_data, strict=False):
-        client = Client(
-            user_id=user.id,
-            first_name=data["first_name"],
-            last_name=data["last_name"],
-        )
-        clients.append(client)
-    return clients
+#     landlords = []
+#     landlord_users = [u for u in users if u.role == "landlord"]
+
+#     for user, data in zip(landlord_users, landlords_data, strict=False):
+#         landlord = Landlord(
+#             user_id=user.id,
+#             first_name=data["first_name"],
+#             last_name=data["last_name"],
+#         )
+#         landlords.append(landlord)
+#     return landlords
+
+
+# def seed_clients(users: list[User]) -> list[Client]:
+#     """Create sample clients linked to users with 'client' role."""
+#     clients_data = [
+#         {"first_name": "Alice", "last_name": "Johnson"},
+#         {"first_name": "Bob", "last_name": "Williams"},
+#     ]
+
+#     clients = []
+#     client_users = [u for u in users if u.role == "client"]
+
+#     for user, data in zip(client_users, clients_data, strict=False):
+#         client = Client(
+#             user_id=user.id,
+#             first_name=data["first_name"],
+#             last_name=data["last_name"],
+#         )
+#         clients.append(client)
+#     return clients
 
 
 def seed_apartments() -> list[Apartment]:
@@ -155,84 +165,102 @@ def seed_apartments() -> list[Apartment]:
     return apartments
 
 
-def run_seed() -> None:
+import asyncio
+from sqlalchemy import select, func
+async def run_seed() -> None:
     """Run the database seeding process."""
     logger.info("Starting database seed process...")
 
-    db = SessionLocal()
-    try:
-        # Check if data already exists
-        existing_users = db.query(User).count()
-        if existing_users > 0:
-            logger.warning(
-                f"Database already contains {existing_users} users. "
-                "Skipping seed to avoid duplicates."
-            )
-            logger.info("To re-seed, please clear the existing data first.")
-            return
+    async with SessionLocal() as db:
+        try:
+            # 1. Проверка наличия данных
+            result = await db.execute(select(func.count()).select_from(User))
+            existing_users = result.scalar()
+            if existing_users > 0:
+                logger.warning("База данных уже содержит пользователей. Пропускаем.")
+                return
 
-        # Create users
-        logger.info("Creating users...")
-        users = seed_users()
-        for user in users:
-            db.add(user)
-        db.commit()
+            # Исходные данные со строго прописанными ролями
+            users_source_data = [
+                {"email": "landlord1@example.com", "role": "landlord", "first_name": "John", "last_name": "Smith"},
+                {"email": "landlord2@example.com", "role": "landlord", "first_name": "Maria", "last_name": "Garcia"},
+                {"email": "client1@example.com", "role": "client", "first_name": "Alice", "last_name": "Johnson"},
+                {"email": "client2@example.com", "role": "client", "first_name": "Bob", "last_name": "Williams"},
+            ]
 
-        # Refresh users to get their IDs
-        for user in users:
-            db.refresh(user)
-        logger.info(f"Created {len(users)} users")
+            logger.info("Создаем пользователей...")
+            
+            # Списки, куда мы разложим созданные объекты SQLAlchemy
+            landlord_users = []
+            client_users = []
 
-        # Create landlords
-        logger.info("Creating landlords...")
-        landlords = seed_landlords(users)
-        for landlord in landlords:
-            db.add(landlord)
-        db.commit()
-        logger.info(f"Created {len(landlords)} landlords")
+            for data in users_source_data:
+                # Создаем пользователя для БД (без поля role!)
+                user = User(
+                    email=data["email"],
+                    phone_number=f"+123456789{users_source_data.index(data)}",
+                    password_hash=f"hashed_password_{data['role']}",
+                    first_name=data["first_name"],
+                    last_name=data["last_name"],
+                )
+                db.add(user)
+                
+                # Запоминаем объект в нужный список прямо в памяти скрипта
+                if data["role"] == "landlord":
+                    landlord_users.append((user, data))
+                else:
+                    client_users.append((user, data))
 
-        # Create clients
-        logger.info("Creating clients...")
-        clients = seed_clients(users)
-        for client in clients:
-            db.add(client)
-        db.commit()
-        logger.info(f"Created {len(clients)} clients")
+            # Сохраняем пользователей в базу, чтобы получить их ID
+            await db.commit()
+            
+            # Нам нужно обновить объекты, чтобы подтянулись сгенерированные id
+            for user, _ in landlord_users + client_users:
+                await db.refresh(user)
 
-        # Create apartments
-        logger.info("Creating apartments...")
-        apartments = seed_apartments()
-        for apartment in apartments:
-            db.add(apartment)
-        db.commit()
-        logger.info(f"Created {len(apartments)} apartments")
+            # 2. Создаем профили лендлордов
+            logger.info("Создаем профили арендодателей...")
+            landlords_created = 0
+            for user, data in landlord_users:
+                landlord = Landlord(
+                    user_id=user.id,
+                    first_name=data["first_name"],
+                    last_name=data["last_name"],
+                )
+                db.add(landlord)
+                landlords_created += 1
 
-        logger.info("Database seed completed successfully!")
+            # 3. Создаем профили клиентов
+            logger.info("Создаем профили клиентов...")
+            clients_created = 0
+            for user, data in client_users:
+                client = Client(
+                    user_id=user.id,
+                    first_name=data["first_name"],
+                    last_name=data["last_name"],
+                )
+                db.add(client)
+                clients_created += 1
 
-        # Print summary
-        logger.info("\n" + "=" * 50)
-        logger.info("SEED SUMMARY")
-        logger.info("=" * 50)
-        logger.info(f"Users created: {len(users)}")
-        logger.info(f"  - Landlords: {len([u for u in users if u.role == 'landlord'])}")
-        logger.info(f"  - Clients: {len([u for u in users if u.role == 'client'])}")
-        logger.info(f"Landlord profiles: {len(landlords)}")
-        logger.info(f"Client profiles: {len(clients)}")
-        logger.info(f"Apartments: {len(apartments)}")
-        logger.info("=" * 50)
+            # 4. Создаем квартиры
+            logger.info("Создаем квартиры...")
+            apartments = seed_apartments()
+            db.add_all(apartments)
+            
+            await db.commit()
 
-    except IntegrityError as e:
-        db.rollback()
-        logger.error(f"Database integrity error: {e}")
-        logger.error("This may occur if data with duplicate unique fields already exists.")
-        raise
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Error during seeding: {e}")
-        raise
-    finally:
-        db.close()
+            logger.info("База данных успешно наполнена!")
+            logger.info(f"Создано пользователей: {len(users_source_data)}")
+            logger.info(f"Создано профилей арендодателей: {landlords_created}")
+            logger.info(f"Создано профилей клиентов: {clients_created}")
+
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Ошибка при наполнении базы: {e}")
+            raise
+
 
 
 if __name__ == "__main__":
-    run_seed()
+    # Запускаем асинхронную функцию через asyncio
+    asyncio.run(run_seed())
