@@ -1,156 +1,127 @@
-# Posutochka API
+# Posutochka API & Frontend
 
-API для сервиса краткосрочной аренды квартир (apartment rental service).
+Сервис краткосрочной аренды квартир (аналог AirBnB/Суточно.ру). Проект включает бэкенд на **FastAPI**, фронтенд на **Next.js**, фоновые задачи через **Celery** и хранилище картинок **MinIO**.
 
-## Требования
+---
 
-- **Python** 3.10+
-- **PostgreSQL** 16+ (с расширением PostGIS)
-- **Redis** 7+ (для брокеров задач и кеширования)
-- **MinIO** (для хранения медиа-файлов)
+## 🏗️ Как устроена архитектура проекта
 
-## Быстрый старт
+В проекте используется **гибридная схема запуска**:
+1. **Инфраструктура ядра (База и Кэш)** — запускаются как независимые глобальные Docker-контейнеры. Это защищает данные от случайного удаления при перезапуске приложения.
+2. **Приложение и Сервисы** — (`FastAPI`, `Next.js`, `Celery Worker/Beat`, `MinIO`) запускаются вместе через единый `docker-compose.yml` и общаются с ядром через системный шлюз `host.docker.internal`.
 
-### 1. С использованием Docker Compose (рекомендуется)
+---
 
-```bash
-# Клонируйте репозиторий
-git clone https://github.com
-cd Posutochka_Fastapi
+## 🚀 Быстрый старт
 
-# Запустите всю инфраструктуру (БД, Redis, MinIO, FastAPI, Celery)
-docker compose up -d
+### Шаг 1: Запуск базовой инфраструктуры (Ядро)
 
-# API доступен на http://localhost:8000
-# Документация Swagger: http://localhost:8000/docs
-# Панель MinIO: http://localhost:9001
-```
-
-### 2. Локальная установка для разработки
+Перед запуском основного приложения необходимо поднять базу данных и брокер очередей. Запустите в терминале следующие команды:
 
 ```bash
-# Создайте и активируйте виртуальное окружение
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# или: venv\Scripts\activate  # Windows
+# 1. Запуск PostgreSQL 16 с поддержкой гео-данных (PostGIS) на порту 5434
+docker run -d \
+  --name containerpostgres \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=123456 \
+  -e POSTGRES_DB=posutochka \
+  -p 5434:5432 \
+  postgis/postgis:16-3.4
 
-# Установите зависимости
-pip install -r requirements.txt
-
-# Настройте переменные окружения
-cp .env.example .env
-# Отредактируйте .env при необходимости
-
-# Запустите базу данных PostgreSQL c PostGIS в Docker
-docker run --name containerpostgres \
-    -e POSTGRES_USER=postgres \
-    -e POSTGRES_PASSWORD=123456 \
-    -e POSTGRES_DB=posutochka \
-    -d -p 5434:5432 postgis/postgis:16-3.4
-
-# Инициализируйте расширения в БД
+# 2. Активация необходимых расширений PostGIS внутри базы данных
 docker exec -it containerpostgres psql -U postgres -d posutochka -c "CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS btree_gist;"
 
-# Примените миграции Alembic
-alembic upgrade head
-
-# Запустите сервер разработки
-uvicorn app.main:app --reload
+# 3. Запуск Redis 7 для Celery и кэша на порту 6380
+docker run -d \
+  --name posutochka_redis_test \
+  -p 6380:6379 \
+  redis:7-alpine
 ```
 
-## Конфигурация
+### Шаг 2: Настройка окружения
 
-Приложение настраивается через переменные окружения в файле `.env`:
+Создайте файл `.env` в корневой директории проекта:
+```bash
+cp .env.example .env
+```
+*Убедитесь, что внутри `.env` указан ваш актуальный токен `TELEGRAM_BOT_TOKEN` для работы уведомлений.*
 
-| Переменная | Описание | Значение по умолчанию |
-|------------|----------|----------------------|
-| `DATABASE_URL` | Строка подключения к PostgreSQL | `postgresql://postgres:123456@localhost:5432/posutochka` |
+### Шаг 3: Запуск приложения и фронтенда
 
-## Структура проекта
+Теперь запускаем всю экосистему проекта одной командой:
+```bash
+# Сборка и запуск контейнеров приложения
+docker compose up -d --build
+
+# Применение миграций базы данных (создание таблиц)
+docker compose exec app alembic upgrade head
+
+# (Опционально) Наполнение базы тестовыми квартирами в Санкт-Петербурге
+docker compose exec app python scripts/seed_apartm.py
+```
+
+**После этого проект полностью готов к работе:**
+* 🌍 **Фронтенд (Next.js):** [http://localhost:3000](http://localhost:3000)
+* ⚙️ **Бэкенд API (FastAPI):** [http://localhost:8000](http://localhost:8000)
+* 📄 **Документация Swagger:** [http://localhost:8000/docs](http://localhost:8000/docs)
+* 🗄️ **Панель MinIO (Хранилище фото):** [http://localhost:9001](http://localhost:9001) (Логин: `admin` / Пароль: `strong_password_2026`)
+
+---
+
+## 🛠️ Разработка и полезные команды
+
+### Работа с миграциями (Alembic)
+Если вы изменили модели данных в коде, выполните:
+```bash
+# Создать файл миграции автоматически
+docker compose exec app alembic revision --autogenerate -m "описание_изменений"
+
+# Применить изменения к базе данных
+docker compose exec app alembic upgrade head
+
+# Откатить последнюю миграцию на один шаг назад
+docker compose exec app alembic downgrade -1
+```
+
+### Тестирование и линтинг
+Команды выполняются внутри контейнера приложения:
+```bash
+# Запуск автотестов с коротким выводом ошибок
+docker compose exec app pytest tests/ -v --tb=short
+
+# Проверка кода линтером Ruff
+docker compose exec app ruff check .
+
+# Автоматическое форматирование кода по стандартам Pep8
+docker compose exec app ruff format .
+```
+
+### Просмотр логов в реальном времени
+```bash
+docker compose logs -f app       # Логи FastAPI бэкенда
+docker compose logs -f worker    # Логи фонового воркера Celery
+```
+
+---
+
+## 📂 Структура проекта
 
 ```text
 posutochka/
-├── app/                        # Основной код приложения FastAPI
-│   ├── main.py                 # Точка входа в API, инициализация приложения
-│   ├── database.py             # Настройка подключения к БД и сессий SQLAlchemy
-│   ├── config.py               # Валидация и чтение переменных окружения (.env)
-│   ├── models/                 # SQLAlchemy модели базы данных
-│   │   ├── __init__.py
-│   │   ├── user.py             # Модели пользователей (Client, Landlord, User)
-│   │   ├── apartment.py        # Модели квартир и гео-данных (PostGIS)
-│   │   └── booking.py          # Модели бронирований и статусов
-│   ├── routers/                # Эндпоинты API (Маршрутизация)
-│   │   ├── auth.py             # Авторизация, регистрация и JWT токены
-│   │   ├── users.py            # Управление пользователями
-│   │   ├── apartments.py       # Поиск и создание объектов недвижимости
-│   │   └── bookings.py         # Логика бронирования квартир
-│   ├── schemas/                # Pydantic-схемы для валидации запросов и ответов
-│   │   ├── user.py
-│   │   ├── apartment.py
-│   │   └── booking.py
-│   └── services/               # Бизнес-логика приложения
-│       ├── auth.py             # Хеширование паролей, генерация токенов
-│       └── storage.py          # Интеграция с MinIO для загрузки фотографий
-├── alembic/                    # Миграции базы данных Alembic
-│   ├── versions/               # Файлы сгенерированных миграций
-│   └── env.py                  # Конфигурация окружения Alembic для работы с моделями
+├── app/                        # Бэкенд приложение (FastAPI)
+│   ├── main.py                 # Точка входа в API
+│   ├── database.py             # Подключение к БД SQLAlchemy
+│   ├── models/                 # SQLAlchemy модели данных (User, Apartment, Booking)
+│   ├── routers/                # Эндпоинты API (Маршрутизация запросов)
+│   ├── schemas/                # Pydantic схемы (Валидация входящих данных)
+│   └── services/               # Бизнес-логика (Авторизация, хранилище MinIO)
+├── posutochka-front/           # Фронтенд приложение (Next.js)
+├── alembic/                    # История миграций базы данных
 ├── tests/                      # Автоматические тесты (pytest)
-│   ├── conftest.py             # Фикстуры для тестов (тестовая БД, сессии, клиенты)
-│   ├── test_auth.py            # Тесты эндпоинтов авторизации
-│   ├── test_users.py           # Тесты управления пользователями
-│   └── test_bookings.py        # Тесты бизнес-логики бронирования
-├── scripts/                    # Вспомогательные скрипты
-│   └── seed_apartm.py          # Скрипт для наполнения БД тестовыми квартирами
-├── .env.example                # Пример файла с переменными окружения
-├── .gitignore                  # Список исключений для Git
-├── Dockerfile                  # Инструкции для сборки Docker-образа бэкенда
-├── docker-compose.yml          # Манифест для запуска всей инфраструктуры проекта
-├── pyproject.toml              # Конфигурация инструментов разработки (Ruff, Pytest)
-└── requirements.txt            # Список зависимостей Python-приложения
+├── scripts/                    # Скрипты автоматизации и сид ТБ (seed_apartm.py)
+├── docker-compose.yml          # Манифест оркестрации контейнеров приложения
+└── pyproject.toml              # Конфигурация Ruff, Pytest и инструментов разработки
 ```
 
-
-## Разработка и тестирование
-
-### Линтинг и форматирование (Ruff)
-```bash
-pip install ruff
-ruff check .      # Проверка кода
-ruff format .     # Форматирование кода
-```
-
-### Запуск тестов (Pytest)
-```bash
-pip install pytest pytest-asyncio httpx pytest-cov
-pytest tests/ -v --tb=short
-```
-
-### Миграции базы данных (Alembic)
-```bash
-# Создать новую миграцию автоматически на основе моделей
-alembic revision --autogenerate -m "описание_изменений"
-
-# Применить все актуальные миграции
-alembic upgrade head
-
-# Откатить последнюю миграцию на 1 шаг назад
-alembic downgrade -1
-```
-
-## API Endpoints
-
-### Сервисные
-- `GET /` — Приветственное сообщение
-- `GET /health` — Проверка состояния API
-- `GET /docs` — Интерактивная документация Swagger
-
-### Основные ресурсы
-- `/auth` — Регистрация и аутентификация (JWT)
-- `/users` — Управление профилями пользователей
-- `/apartments` — Каталог квартир и гео-поиск (PostGIS)
-- `/bookings` — Создание и управление бронированиями
-- `/photos` — Загрузка изображений объектов в MinIO
-
-## Лицензия
-
+## 📜 Лицензия
 MIT
