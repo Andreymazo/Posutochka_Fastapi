@@ -68,19 +68,47 @@ uvicorn app.main:app --reload
 
 ## Структура проекта
 
+```text
 posutochka/
-├── app/
-│   ├── main.py           # Точка входа FastAPI
-│   ├── database.py       # Конфигурация базы данных
-│   ├── models/           # SQLAlchemy модели (User, Apartment, Booking и др.)
-│   ├── routers/          # API роутеры (auth, users, apartments, bookings)
-│   └── schemas/          # Pydantic схемы для валидации данных
-├── alembic/              # Миграции базы данных
-├── tests/                # Автотесты (pytest)
-├── .env.example          # Пример конфигурации окружения
-├── docker-compose.yml    # Конфигурация Docker Compose
-├── Dockerfile            # Инструкция сборки образа приложения
-└── requirements.txt      # Зависимости Python
+├── app/                        # Основной код приложения FastAPI
+│   ├── main.py                 # Точка входа в API, инициализация приложения
+│   ├── database.py             # Настройка подключения к БД и сессий SQLAlchemy
+│   ├── config.py               # Валидация и чтение переменных окружения (.env)
+│   ├── models/                 # SQLAlchemy модели базы данных
+│   │   ├── __init__.py
+│   │   ├── user.py             # Модели пользователей (Client, Landlord, User)
+│   │   ├── apartment.py        # Модели квартир и гео-данных (PostGIS)
+│   │   └── booking.py          # Модели бронирований и статусов
+│   ├── routers/                # Эндпоинты API (Маршрутизация)
+│   │   ├── auth.py             # Авторизация, регистрация и JWT токены
+│   │   ├── users.py            # Управление пользователями
+│   │   ├── apartments.py       # Поиск и создание объектов недвижимости
+│   │   └── bookings.py         # Логика бронирования квартир
+│   ├── schemas/                # Pydantic-схемы для валидации запросов и ответов
+│   │   ├── user.py
+│   │   ├── apartment.py
+│   │   └── booking.py
+│   └── services/               # Бизнес-логика приложения
+│       ├── auth.py             # Хеширование паролей, генерация токенов
+│       └── storage.py          # Интеграция с MinIO для загрузки фотографий
+├── alembic/                    # Миграции базы данных Alembic
+│   ├── versions/               # Файлы сгенерированных миграций
+│   └── env.py                  # Конфигурация окружения Alembic для работы с моделями
+├── tests/                      # Автоматические тесты (pytest)
+│   ├── conftest.py             # Фикстуры для тестов (тестовая БД, сессии, клиенты)
+│   ├── test_auth.py            # Тесты эндпоинтов авторизации
+│   ├── test_users.py           # Тесты управления пользователями
+│   └── test_bookings.py        # Тесты бизнес-логики бронирования
+├── scripts/                    # Вспомогательные скрипты
+│   └── seed_apartm.py          # Скрипт для наполнения БД тестовыми квартирами
+├── .env.example                # Пример файла с переменными окружения
+├── .gitignore                  # Список исключений для Git
+├── Dockerfile                  # Инструкции для сборки Docker-образа бэкенда
+├── docker-compose.yml          # Манифест для запуска всей инфраструктуры проекта
+├── pyproject.toml              # Конфигурация инструментов разработки (Ruff, Pytest)
+└── requirements.txt            # Список зависимостей Python-приложения
+```
+
 
 ## Разработка и тестирование
 
